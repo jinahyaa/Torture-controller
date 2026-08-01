@@ -97,6 +97,12 @@
       margin-top: 30px;
     }
 
+    .trace-label {
+      margin-bottom: 12px;
+
+      color: #ccc;
+    }
+
     .trace-pad {
       position: relative;
 
@@ -143,12 +149,6 @@
 
       box-shadow:
         0 0 15px rgba(255,255,255,0.8);
-    }
-
-    .trace-label {
-      margin-bottom: 12px;
-
-      color: #ccc;
     }
 
     .intensity-display {
@@ -253,6 +253,7 @@ const BACKEND_URL =
 const PLATFORM =
   "LiasLittleTorture";
 
+
 const statusElement =
   document.getElementById("status");
 
@@ -268,26 +269,49 @@ const tracePad =
 const traceIndicator =
   document.getElementById("traceIndicator");
 
+const currentIntensityDisplay =
+  document.getElementById("currentIntensity");
+
+
 let socket = null;
+
 let ackId = null;
+
 let connectedToyId = null;
 
-let isTouching = false;
-let targetIntensity = 0;
-let currentIntensity = 0;
-let lastSentIntensity = -1;
-let lastCommandTime = 0;
+
+// --------------------------------
+// TRACE VARIABLES
+// --------------------------------
+
+let isTouching =
+  false;
+
+let targetIntensity =
+  0;
+
+let currentIntensity =
+  0;
+
+let lastSentIntensity =
+  -1;
+
+let lastCommandTime =
+  0;
 
 
 // --------------------------------
-// SEND COMMAND TO LOVENSE
+// SEND COMMAND
 // --------------------------------
 
-function sendToyCommand(intensity) {
+function sendToyCommand(
+  intensity
+) {
 
   if (!socket) {
     return;
   }
+
 
   const toyCommand = {
 
@@ -305,10 +329,12 @@ function sendToyCommand(intensity) {
 
   };
 
+
   console.log(
-    "Sending:",
-    toyCommand
+    "Sending intensity:",
+    intensity
   );
+
 
   socket.emit(
     "basicapi_send_toy_command_ts",
@@ -327,15 +353,15 @@ async function connectLovense() {
   statusElement.textContent =
     "Getting Lovense authentication...";
 
+
   const uid =
     "user-" +
     Math.random()
       .toString(36)
       .substring(2, 12);
 
-  try {
 
-    // Get authentication token
+  try {
 
     const authResponse =
       await fetch(
@@ -359,13 +385,16 @@ async function connectLovense() {
         }
       );
 
+
     const authData =
       await authResponse.json();
+
 
     console.log(
       "Auth response:",
       authData
     );
+
 
     if (
       authData.code !== 0 ||
@@ -379,14 +408,14 @@ async function connectLovense() {
 
     }
 
+
     const authToken =
       authData.data.authToken;
 
 
-    // Get Socket information
-
     statusElement.textContent =
       "Getting Lovense connection...";
+
 
     const socketResponse =
       await fetch(
@@ -415,13 +444,16 @@ async function connectLovense() {
         }
       );
 
+
     const socketData =
       await socketResponse.json();
+
 
     console.log(
       "Socket response:",
       socketData
     );
+
 
     if (
       socketData.code !== 0
@@ -435,13 +467,13 @@ async function connectLovense() {
     }
 
 
-    // Connect Socket
-
     statusElement.textContent =
       "Opening Lovense connection...";
 
+
     const socketInfo =
       socketData.data;
+
 
     socket =
       io(
@@ -458,7 +490,7 @@ async function connectLovense() {
       );
 
 
-    // Socket connected
+    // SOCKET CONNECTED
 
     socket.on(
       "connect",
@@ -468,16 +500,16 @@ async function connectLovense() {
           "Lovense Socket connected!"
         );
 
+
         statusElement.textContent =
           "Lovense connected ✅";
 
-
-        // Request QR code
 
         ackId =
           Math.random()
             .toString(36)
             .substring(2, 20);
+
 
         socket.emit(
           "basicapi_get_qrcode_ts",
@@ -493,7 +525,7 @@ async function connectLovense() {
     );
 
 
-    // Receive QR code
+    // QR CODE
 
     socket.on(
       "basicapi_get_qrcode_tc",
@@ -504,10 +536,12 @@ async function connectLovense() {
             ? JSON.parse(res)
             : {};
 
+
         console.log(
           "QR response:",
           resData
         );
+
 
         if (
           resData.data &&
@@ -517,8 +551,10 @@ async function connectLovense() {
           qrCode.src =
             resData.data.qrcodeUrl;
 
+
           qrContainer.style.display =
             "block";
+
 
           statusElement.textContent =
             "QR ready — scan with Lovense Remote 📱";
@@ -529,7 +565,7 @@ async function connectLovense() {
     );
 
 
-    // Detect connected toy
+    // TOY DETECTION
 
     socket.on(
       "basicapi_update_device_info_tc",
@@ -540,10 +576,12 @@ async function connectLovense() {
             ? JSON.parse(res)
             : {};
 
+
         console.log(
           "Device information:",
           deviceInfo
         );
+
 
         if (
           deviceInfo.toyList &&
@@ -553,8 +591,10 @@ async function connectLovense() {
           connectedToyId =
             deviceInfo.toyList[0].id;
 
+
           statusElement.textContent =
             "Toy connected ✅";
+
 
           console.log(
             "Connected toy:",
@@ -567,7 +607,7 @@ async function connectLovense() {
     );
 
 
-    // Disconnected
+    // DISCONNECTED
 
     socket.on(
       "disconnect",
@@ -576,6 +616,7 @@ async function connectLovense() {
         connectedToyId =
           null;
 
+
         statusElement.textContent =
           "Lovense disconnected ❌";
 
@@ -583,7 +624,7 @@ async function connectLovense() {
     );
 
 
-    // Socket error
+    // SOCKET ERROR
 
     socket.on(
       "connect_error",
@@ -593,6 +634,7 @@ async function connectLovense() {
           "Lovense Socket error:",
           error
         );
+
 
         statusElement.textContent =
           "Lovense Socket error ❌";
@@ -608,6 +650,7 @@ async function connectLovense() {
       error
     );
 
+
     statusElement.textContent =
       "Connection error ❌";
 
@@ -617,94 +660,33 @@ async function connectLovense() {
 
 
 // --------------------------------
-// START / STOP BUTTONS
+// UPDATE FINGER POSITION
 // --------------------------------
 
-window.sendCommand =
-function(command) {
-
-  if (!socket) {
-
-    statusElement.textContent =
-      "Not connected ❌";
-
-    return;
-
-  }
-
-  let action =
-    "";
-
-  if (
-    command === "start"
-  ) {
-
-    action =
-      "Vibrate:5";
-
-  }
-
-  if (
-    command === "stop"
-  ) {
-
-    action =
-      "Vibrate:0";
-
-  }
-
-  const toyCommand = {
-
-    command:
-      "Function",
-
-    action:
-      action,
-
-    timeSec:
-      20,
-
-    apiVer:
-      1
-
-  };
-
-  console.log(
-    "Sending button command:",
-    toyCommand
-  );
-
-  socket.emit(
-    "basicapi_send_toy_command_ts",
-    toyCommand
-  );
-
-};
-
-
-// --------------------------------
-// FINGER / MOUSE TRACE
-// --------------------------------
-
-function updateTrace(event) {
+function updateTrace(
+  event
+) {
 
   if (!isTouching) {
     return;
   }
 
+
   const rect =
     tracePad.getBoundingClientRect();
+
 
   let x =
     event.clientX -
     rect.left;
+
 
   let y =
     event.clientY -
     rect.top;
 
 
-  // Keep inside pad
+  // KEEP POINTER INSIDE PAD
 
   x =
     Math.max(
@@ -714,6 +696,7 @@ function updateTrace(event) {
         x
       )
     );
+
 
   y =
     Math.max(
@@ -725,32 +708,45 @@ function updateTrace(event) {
     );
 
 
-  // Move indicator
+  // POSITION PERCENTAGES
 
   const percentX =
-    (x / rect.width) * 100;
+    (x / rect.width) *
+    100;
+
 
   const percentY =
-    (y / rect.height) * 100;
+    (y / rect.height) *
+    100;
+
+
+  // MOVE DOT
 
   traceIndicator.style.left =
     `${percentX}%`;
+
 
   traceIndicator.style.top =
     `${percentY}%`;
 
 
-  // Vertical position controls intensity
+  // VERTICAL POSITION
+  // TOP = HIGH
+  // BOTTOM = LOW
 
   targetIntensity =
-    Math.round(
-      (1 - percentY / 100) * 20
-    );
+    (
+      1 -
+      percentY / 100
+    ) *
+    20;
 
 }
 
 
-// Start touching / clicking
+// --------------------------------
+// POINTER DOWN
+// --------------------------------
 
 tracePad.addEventListener(
   "pointerdown",
@@ -759,45 +755,63 @@ tracePad.addEventListener(
     isTouching =
       true;
 
+
     tracePad.setPointerCapture(
       event.pointerId
     );
 
-    updateTrace(event);
+
+    updateTrace(
+      event
+    );
 
   }
 );
 
 
-// Move finger / mouse
+// --------------------------------
+// POINTER MOVE
+// --------------------------------
 
 tracePad.addEventListener(
   "pointermove",
   (event) => {
 
-    updateTrace(event);
+    updateTrace(
+      event
+    );
 
   }
 );
 
 
-// Release finger / mouse
+// --------------------------------
+// POINTER UP
+// --------------------------------
 
 tracePad.addEventListener(
   "pointerup",
-  () => {
+  (event) => {
 
     isTouching =
       false;
 
+
     targetIntensity =
       0;
+
+
+    tracePad.releasePointerCapture(
+      event.pointerId
+    );
 
   }
 );
 
 
-// If pointer leaves / gets cancelled
+// --------------------------------
+// POINTER CANCEL
+// --------------------------------
 
 tracePad.addEventListener(
   "pointercancel",
@@ -806,6 +820,7 @@ tracePad.addEventListener(
     isTouching =
       false;
 
+
     targetIntensity =
       0;
 
@@ -814,18 +829,19 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// SMOOTH TRACE LOOP
+// SMOOTH INTENSITY ENGINE
 // --------------------------------
 
 function smoothTrace() {
 
-  // Smoothly approach target
+  // Smooth movement
 
   currentIntensity +=
     (
       targetIntensity -
       currentIntensity
-    ) * 0.12;
+    ) *
+    0.08;
 
 
   const intensity =
@@ -834,23 +850,36 @@ function smoothTrace() {
     );
 
 
+  // Display intensity
+
+  currentIntensityDisplay.textContent =
+    intensity;
+
+
   const now =
     Date.now();
 
 
-  // Update only when needed
+  // Send commands
+  // approximately every 80ms
 
   if (
     socket &&
-    now - lastCommandTime >= 150 &&
-    intensity !== lastSentIntensity
+    connectedToyId &&
+    now -
+    lastCommandTime >=
+    80 &&
+    intensity !==
+    lastSentIntensity
   ) {
 
     lastCommandTime =
       now;
 
+
     lastSentIntensity =
       intensity;
+
 
     sendToyCommand(
       intensity
@@ -866,7 +895,7 @@ function smoothTrace() {
 }
 
 
-// Start animation
+// START SMOOTH ENGINE
 
 smoothTrace();
 
