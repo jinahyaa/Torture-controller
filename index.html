@@ -109,6 +109,23 @@
       Backend connecting...
     </div>
 
+    <div id="qrContainer" style="display: none; margin: 20px 0;">
+
+  <p>Scan this with Lovense Remote 📱</p>
+
+  <img
+    id="qrCode"
+    alt="Lovense QR Code"
+    style="
+      width: 250px;
+      max-width: 100%;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+    "
+  >
+
+</div>
     <button
       id="connectButton"
       onclick="connectLovense()"
@@ -157,6 +174,11 @@
     const statusElement =
       document.getElementById("status");
 
+    const qrContainer =
+  document.getElementById("qrContainer");
+
+const qrCode =
+  document.getElementById("qrCode");
 
     const intensitySlider =
       document.getElementById("intensity");
@@ -333,6 +355,12 @@ async function connectLovense() {
             resData.data.qrcodeUrl
           );
 
+          qrCode.src =
+  resData.data.qrcodeUrl;
+
+qrContainer.style.display =
+  "block";
+          
           statusElement.textContent =
             "QR code received ✅";
 
