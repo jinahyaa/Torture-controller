@@ -33,8 +33,11 @@
       max-width: 500px;
 
       background: #1c1c1c;
+
       border-radius: 20px;
+
       padding: 25px;
+
       text-align: center;
     }
 
@@ -44,18 +47,27 @@
 
     .status {
       margin: 20px 0;
+
       padding: 12px;
+
       border-radius: 10px;
+
       background: #2a2a2a;
     }
 
     #connectButton {
       width: 100%;
+
       padding: 15px;
+
       margin-top: 10px;
+
       border: none;
+
       border-radius: 12px;
+
       font-size: 16px;
+
       cursor: pointer;
     }
 
@@ -65,14 +77,19 @@
 
     #qrContainer {
       display: none;
+
       margin: 20px 0;
     }
 
     #qrCode {
       width: 250px;
+
       max-width: 100%;
+
       background: white;
+
       padding: 10px;
+
       border-radius: 10px;
     }
 
@@ -82,6 +99,7 @@
 
     .trace-label {
       margin-bottom: 12px;
+
       color: #ccc;
     }
 
@@ -89,6 +107,7 @@
       position: relative;
 
       width: 100%;
+
       height: 350px;
 
       background: #2a2a2a;
@@ -104,6 +123,7 @@
       cursor: crosshair;
 
       user-select: none;
+
       -webkit-user-select: none;
     }
 
@@ -111,6 +131,7 @@
       position: absolute;
 
       width: 34px;
+
       height: 34px;
 
       background: white;
@@ -123,6 +144,7 @@
       pointer-events: none;
 
       left: 50%;
+
       top: 100%;
 
       box-shadow:
@@ -139,33 +161,8 @@
 
     #currentIntensity {
       color: white;
+
       font-weight: bold;
-    }
-
-    .test-container {
-      margin-top: 25px;
-    }
-
-    .test-container p {
-      color: #ccc;
-    }
-
-    .test-button {
-      padding: 12px 15px;
-
-      margin: 5px;
-
-      border: none;
-
-      border-radius: 10px;
-
-      font-size: 14px;
-
-      cursor: pointer;
-    }
-
-    .test-button:active {
-      transform: scale(0.96);
     }
   </style>
 
@@ -244,38 +241,6 @@
   </div>
 
 </div>
-
-
-<!-- AMBI TEST BUTTONS -->
-
-<div class="test-container">
-
-  <p>
-    Ambi Motor Tests 🧪
-  </p>
-
-  <button
-    class="test-button"
-    onclick="testAmbi('normal')"
-  >
-    Test Normal
-  </button>
-
-  <button
-    class="test-button"
-    onclick="testAmbi('motor1')"
-  >
-    Test Motor 1
-  </button>
-
-  <button
-    class="test-button"
-    onclick="testAmbi('motor2')"
-  >
-    Test Motor 2
-  </button>
-
-</div>
 ```
 
   </div>
@@ -329,13 +294,50 @@ let connectedToyId = null;
 
 let isTouching = false;
 
+
+// The intensity the finger is asking for
+
 let targetIntensity = 0;
+
+
+// The intensity currently being sent
 
 let currentIntensity = 0;
 
+
+// Last intensity actually sent
+
 let lastSentIntensity = -1;
 
+
+// Time of last command
+
 let lastCommandTime = 0;
+
+
+// --------------------------------
+// SMOOTHING SETTINGS
+// --------------------------------
+
+// How often we send commands
+// Lower = more responsive
+// Higher = fewer commands
+
+const COMMAND_INTERVAL = 80;
+
+
+// How quickly the toy follows
+// the finger.
+//
+// Higher = faster response
+// Lower = smoother but slower
+
+const SMOOTHING = 0.18;
+
+
+// Maximum Ambi intensity
+
+const MAX_INTENSITY = 20;
 
 
 // --------------------------------
@@ -347,6 +349,7 @@ function sendToyCommand(intensity) {
   if (!socket) {
     return;
   }
+
 
   const toyCommand = {
 
@@ -367,93 +370,10 @@ function sendToyCommand(intensity) {
 
   };
 
-  console.log(
-    "Lovense command:",
-    toyCommand
-  );
-
-  socket.emit(
-    "basicapi_send_toy_command_ts",
-    toyCommand
-  );
-
-}
-
-
-// --------------------------------
-// AMBI TEST COMMAND
-// --------------------------------
-
-function testAmbi(type) {
-
-  if (!socket) {
-
-    alert(
-      "Lovense is not connected!"
-    );
-
-    return;
-
-  }
-
-
-  let action =
-    "";
-
-
-  if (
-    type === "normal"
-  ) {
-
-    action =
-      "Vibrate:5";
-
-  }
-
-
-  if (
-    type === "motor1"
-  ) {
-
-    action =
-      "Vibrate1:5";
-
-  }
-
-
-  if (
-    type === "motor2"
-  ) {
-
-    action =
-      "Vibrate2:5";
-
-  }
-
-
-  const toyCommand = {
-
-    toy:
-      connectedToyId,
-
-    command:
-      "Function",
-
-    action:
-      action,
-
-    timeSec:
-      5,
-
-    apiVer:
-      1
-
-  };
-
 
   console.log(
-    "Testing Ambi:",
-    toyCommand
+    "Lovense intensity:",
+    intensity
   );
 
 
@@ -807,7 +727,7 @@ async function connectLovense() {
 
 
 // --------------------------------
-// FINGER TRACE
+// UPDATE FINGER POSITION
 // --------------------------------
 
 function updateTrace(event) {
@@ -863,24 +783,33 @@ function updateTrace(event) {
     (y / rect.height) * 100;
 
 
-  // Move dot
+  // --------------------------------
+  // MOVE VISUAL DOT
+  // --------------------------------
+
+  // The dot follows the finger
+  // immediately with no smoothing.
 
   traceIndicator.style.left =
     `${percentX}%`;
-
 
   traceIndicator.style.top =
     `${percentY}%`;
 
 
-  // Vertical position
-  // controls intensity
+  // --------------------------------
+  // CALCULATE TARGET INTENSITY
+  // --------------------------------
+
+  // Top = maximum
+  // Bottom = minimum
 
   targetIntensity =
     (
       1 -
       percentY / 100
-    ) * 20;
+    ) *
+    MAX_INTENSITY;
 
 }
 
@@ -934,13 +863,23 @@ tracePad.addEventListener(
       false;
 
 
+    // Smoothly fade toward zero
+
     targetIntensity =
       0;
 
 
-    tracePad.releasePointerCapture(
-      event.pointerId
-    );
+    if (
+      tracePad.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+
+      tracePad.releasePointerCapture(
+        event.pointerId
+      );
+
+    }
 
   }
 );
@@ -966,20 +905,41 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// SMOOTH TRACE ENGINE
+// SMOOTH TOY ENGINE
 // --------------------------------
 
 function smoothTrace() {
+
+  // Calculate difference
 
   const difference =
     targetIntensity -
     currentIntensity;
 
 
+  // Smoothly move toward target
+
   currentIntensity +=
     difference *
-    0.08;
+    SMOOTHING;
 
+
+  // Stop tiny floating point
+  // movements from continuing forever
+
+  if (
+    Math.abs(
+      difference
+    ) < 0.01
+  ) {
+
+    currentIntensity =
+      targetIntensity;
+
+  }
+
+
+  // Convert to whole intensity
 
   const intensity =
     Math.round(
@@ -987,20 +947,28 @@ function smoothTrace() {
     );
 
 
+  // Update display
+
   currentIntensityElement.textContent =
     intensity;
 
 
+  // Current time
+
   const now =
     performance.now();
 
+
+  // --------------------------------
+  // SEND COMMAND
+  // --------------------------------
 
   if (
     socket &&
     connectedToyId &&
     now -
     lastCommandTime >=
-    100 &&
+    COMMAND_INTERVAL &&
     intensity !==
     lastSentIntensity
   ) {
@@ -1020,6 +988,8 @@ function smoothTrace() {
   }
 
 
+  // Run again
+
   requestAnimationFrame(
     smoothTrace
   );
@@ -1027,7 +997,9 @@ function smoothTrace() {
 }
 
 
-// Start smooth engine
+// --------------------------------
+// START SMOOTH ENGINE
+// --------------------------------
 
 smoothTrace();
 
