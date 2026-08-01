@@ -164,7 +164,7 @@
 
   </div>
 
-  <script>
+ <script>
 
   const BACKEND_URL =
     "https://torture-controller.onrender.com";
@@ -191,10 +191,12 @@
 
   let socket = null;
 
-let ackId = null;
+  let ackId = null;
 
-let connectedToyId = null;
+  let connectedToyId = null;
 
+
+  // Intensity slider display
 
   intensitySlider.addEventListener(
     "input",
@@ -206,383 +208,407 @@ let connectedToyId = null;
     }
   );
 
-  window.connectLovense = async function() {
 
-    statusElement.textContent =
-      "Getting Lovense authentication...";
+  // Connect to Lovense
 
-
-    const uid =
-      "user-" +
-      Math.random()
-        .toString(36)
-        .substring(2, 12);
-
-
-    try {
-
-      // STEP 1: Get authentication token
-
-      const authResponse =
-        await fetch(
-          `${BACKEND_URL}/auth-token`,
-          {
-
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify({
-                uid:
-                  uid
-              })
-
-          }
-        );
-
-
-      const authData =
-        await authResponse.json();
-
-
-      console.log(
-        "Auth response:",
-        authData
-      );
-
-
-      if (
-        authData.code !== 0 ||
-        !authData.data?.authToken
-      ) {
-
-        statusElement.textContent =
-          "Authentication failed ❌";
-
-        return;
-
-      }
-
-
-      const authToken =
-        authData.data.authToken;
-
-
-      // STEP 2: Get Socket information
+  window.connectLovense =
+    async function() {
 
       statusElement.textContent =
-        "Getting Lovense connection...";
+        "Getting Lovense authentication...";
 
 
-      const socketResponse =
-        await fetch(
-          "https://api.lovense-api.com/api/basicApi/getSocketUrl",
-          {
-
-            method:
-              "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body:
-              JSON.stringify({
-
-                platform:
-                  PLATFORM,
-
-                authToken:
-                  authToken
-
-              })
-
-          }
-        );
+      const uid =
+        "user-" +
+        Math.random()
+          .toString(36)
+          .substring(2, 12);
 
 
-      const socketData =
-        await socketResponse.json();
+      try {
 
+        // STEP 1: Get authentication token
 
-      console.log(
-        "Socket response:",
-        socketData
-      );
-
-
-      if (
-        socketData.code !== 0
-      ) {
-
-        statusElement.textContent =
-          "Socket setup failed ❌";
-
-        return;
-
-      }
-
-
-      // STEP 3: Connect Socket
-
-      statusElement.textContent =
-        "Opening Lovense connection...";
-
-
-      const socketInfo =
-        socketData.data;
-
-
-      socket =
-        io(
-          socketInfo.socketIoUrl,
-          {
-
-            path:
-              socketInfo.socketIoPath,
-
-            transports:
-              ["websocket"]
-
-          }
-        );
-
-
-      socket.on(
-        "connect",
-        () => {
-
-          console.log(
-            "Lovense Socket connected!"
-          );
-
-
-          statusElement.textContent =
-            "Lovense connected ✅";
-
-
-          // STEP 4: Request QR code
-
-          ackId =
-            Math.random()
-              .toString(36)
-              .substring(2, 20);
-
-
-          socket.emit(
-            "basicapi_get_qrcode_ts",
+        const authResponse =
+          await fetch(
+            `${BACKEND_URL}/auth-token`,
             {
 
-              ackId:
-                ackId
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  uid:
+                    uid
+                })
 
             }
           );
 
 
+        const authData =
+          await authResponse.json();
+
+
+        console.log(
+          "Auth response:",
+          authData
+        );
+
+
+        if (
+          authData.code !== 0 ||
+          !authData.data?.authToken
+        ) {
+
+          statusElement.textContent =
+            "Authentication failed ❌";
+
+          return;
+
         }
-      );
 
 
-      // Receive QR code
-
-      socket.on(
-        "basicapi_get_qrcode_tc",
-        (res) => {
-
-          const resData =
-            res
-              ? JSON.parse(res)
-              : {};
+        const authToken =
+          authData.data.authToken;
 
 
-          console.log(
-            "QR response:",
-            resData
+        // STEP 2: Get Socket information
+
+        statusElement.textContent =
+          "Getting Lovense connection...";
+
+
+        const socketResponse =
+          await fetch(
+            "https://api.lovense-api.com/api/basicApi/getSocketUrl",
+            {
+
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+
+                  platform:
+                    PLATFORM,
+
+                  authToken:
+                    authToken
+
+                })
+
+            }
           );
 
 
-          if (
-  deviceInfo.toyList &&
-  deviceInfo.toyList.length > 0
-) {
-
-  connectedToyId =
-    deviceInfo.toyList[0].id;
-
-  statusElement.textContent =
-    "Toy connected ✅";
-
-  console.log(
-    "Connected toy:",
-    deviceInfo.toyList[0]
-  );
-
-}
+        const socketData =
+          await socketResponse.json();
 
 
-      // STEP 5: Detect connected toy
-
-      socket.on(
-        "basicapi_update_device_info_tc",
-        (res) => {
-
-          const deviceInfo =
-            res
-              ? JSON.parse(res)
-              : {};
+        console.log(
+          "Socket response:",
+          socketData
+        );
 
 
-          console.log(
-            "Device information:",
-            deviceInfo
+        if (
+          socketData.code !== 0
+        ) {
+
+          statusElement.textContent =
+            "Socket setup failed ❌";
+
+          return;
+
+        }
+
+
+        // STEP 3: Connect Socket
+
+        statusElement.textContent =
+          "Opening Lovense connection...";
+
+
+        const socketInfo =
+          socketData.data;
+
+
+        socket =
+          io(
+            socketInfo.socketIoUrl,
+            {
+
+              path:
+                socketInfo.socketIoPath,
+
+              transports:
+                ["websocket"]
+
+            }
           );
 
 
-          if (
-            deviceInfo.toyList &&
-            deviceInfo.toyList.length > 0
-          ) {
+        // Socket connected
 
-            statusElement.textContent =
-              "Toy connected ✅";
-
+        socket.on(
+          "connect",
+          () => {
 
             console.log(
-              "Connected toy:",
-              deviceInfo.toyList
+              "Lovense Socket connected!"
+            );
+
+
+            statusElement.textContent =
+              "Lovense connected ✅";
+
+
+            // STEP 4: Request QR code
+
+            ackId =
+              Math.random()
+                .toString(36)
+                .substring(2, 20);
+
+
+            socket.emit(
+              "basicapi_get_qrcode_ts",
+              {
+
+                ackId:
+                  ackId
+
+              }
             );
 
           }
+        );
 
-        }
+
+        // Receive QR code
+
+        socket.on(
+          "basicapi_get_qrcode_tc",
+          (res) => {
+
+            const resData =
+              res
+                ? JSON.parse(res)
+                : {};
+
+
+            console.log(
+              "QR response:",
+              resData
+            );
+
+
+            if (
+              resData.data &&
+              resData.data.ackId === ackId
+            ) {
+
+              console.log(
+                "QR Code URL:",
+                resData.data.qrcodeUrl
+              );
+
+
+              qrCode.src =
+                resData.data.qrcodeUrl;
+
+
+              qrContainer.style.display =
+                "block";
+
+
+              statusElement.textContent =
+                "QR code ready — scan with Lovense Remote 📱";
+
+            }
+
+          }
+        );
+
+
+        // STEP 5: Detect connected toy
+
+        socket.on(
+          "basicapi_update_device_info_tc",
+          (res) => {
+
+            const deviceInfo =
+              res
+                ? JSON.parse(res)
+                : {};
+
+
+            console.log(
+              "Device information:",
+              deviceInfo
+            );
+
+
+            if (
+              deviceInfo.toyList &&
+              deviceInfo.toyList.length > 0
+            ) {
+
+              connectedToyId =
+                deviceInfo.toyList[0].id;
+
+
+              statusElement.textContent =
+                "Toy connected ✅";
+
+
+              console.log(
+                "Connected toy:",
+                deviceInfo.toyList[0]
+              );
+
+            }
+
+          }
+        );
+
+
+        // Socket disconnected
+
+        socket.on(
+          "disconnect",
+          () => {
+
+            connectedToyId =
+              null;
+
+
+            statusElement.textContent =
+              "Lovense disconnected ❌";
+
+          }
+        );
+
+
+        // Socket connection error
+
+        socket.on(
+          "connect_error",
+          (error) => {
+
+            console.error(
+              "Lovense Socket error:",
+              error
+            );
+
+
+            statusElement.textContent =
+              "Lovense Socket error ❌";
+
+          }
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Connection error:",
+          error
+        );
+
+
+        statusElement.textContent =
+          "Connection error ❌";
+
+      }
+
+    };
+
+
+  // Send toy command
+
+  window.sendCommand =
+    function(command) {
+
+      if (!socket) {
+
+        statusElement.textContent =
+          "Not connected ❌";
+
+        return;
+
+      }
+
+
+      if (!connectedToyId) {
+
+        statusElement.textContent =
+          "No toy detected ❌";
+
+        return;
+
+      }
+
+
+      let action =
+        "";
+
+
+      if (
+        command === "start"
+      ) {
+
+        action =
+          "Vibrate:5";
+
+      }
+
+
+      if (
+        command === "stop"
+      ) {
+
+        action =
+          "Vibrate:0";
+
+      }
+
+
+      const toyCommand = {
+
+        toy:
+          connectedToyId,
+
+        command:
+          action
+
+      };
+
+
+      console.log(
+        "Sending toy command:",
+        toyCommand
       );
 
 
-      socket.on(
-        "disconnect",
-        () => {
-
-          statusElement.textContent =
-            "Lovense disconnected ❌";
-
-        }
+      socket.emit(
+        "basicapi_send_toy_command_ts",
+        toyCommand
       );
 
-
-      socket.on(
-        "connect_error",
-        (error) => {
-
-          console.error(
-            "Lovense Socket error:",
-            error
-          );
-
-
-          statusElement.textContent =
-            "Lovense Socket error ❌";
-
-        }
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "Connection error:",
-        error
-      );
-
-
-      statusElement.textContent =
-        "Connection error ❌";
-
-    }
-
-  }
-
-
-function sendCommand(
-  command
-) {
-
-  if (!socket) {
-
-    statusElement.textContent =
-      "Not connected ❌";
-
-    return;
-
-  }
-
-
-  if (
-    !connectedToyId
-  ) {
-
-    statusElement.textContent =
-      "No toy detected ❌";
-
-    return;
-
-  }
-
-
-  let action =
-    "";
-
-
-  if (
-    command === "start"
-  ) {
-
-    action =
-      "Vibrate:5";
-
-  }
-
-
-  if (
-    command === "stop"
-  ) {
-
-    action =
-      "Vibrate:0";
-
-  }
-
-
-  const toyCommand = {
-
-    toy:
-      connectedToyId,
-
-    command:
-      action
-
-  };
-
-
-  console.log(
-    "Sending toy command:",
-    toyCommand
-  );
-
-
-  socket.emit(
-    "basicapi_send_toy_command_ts",
-    toyCommand
-  );
-
-}
-
+    };
 
 </script>
 
