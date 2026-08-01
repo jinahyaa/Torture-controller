@@ -24,7 +24,7 @@ app.post("/auth-token", async (req, res) => {
     }
 
     const response = await fetch(
-      "https://api.lovense.com/api/lan/getToken",
+      "https://api.lovense-api.com/api/basicApi/getToken",
       {
         method: "POST",
 
