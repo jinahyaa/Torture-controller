@@ -330,6 +330,35 @@ async function connectLovense() {
       "basicapi_get_qrcode_ts",
       {
         ackId: ackId
+socket.on(
+  "basicapi_update_device_info_tc",
+  (res) => {
+
+    const deviceInfo =
+      res ? JSON.parse(res) : {};
+
+    console.log(
+      "Device information:",
+      deviceInfo
+    );
+
+    if (
+      deviceInfo.toyList &&
+      deviceInfo.toyList.length > 0
+    ) {
+
+      statusElement.textContent =
+        "Toy connected ✅";
+
+      console.log(
+        "Connected toy:",
+        deviceInfo.toyList
+      );
+
+    }
+
+  }
+);
       }
     );
 
