@@ -699,7 +699,20 @@ async function connectLovense() {
 
 
 // --------------------------------
-// FINGER / MOUSE POSITION
+// SMOOTH FINGER TRACE
+// --------------------------------
+
+let isTouching = false;
+
+let targetIntensity = 0;
+let currentIntensity = 0;
+
+let lastSentIntensity = -1;
+let lastCommandTime = 0;
+
+
+// --------------------------------
+// UPDATE FINGER POSITION
 // --------------------------------
 
 function updateTrace(event) {
@@ -707,7 +720,6 @@ function updateTrace(event) {
   if (!isTouching) {
     return;
   }
-
 
   const rect =
     tracePad.getBoundingClientRect();
@@ -717,13 +729,12 @@ function updateTrace(event) {
     event.clientX -
     rect.left;
 
-
   let y =
     event.clientY -
     rect.top;
 
 
-  // Keep inside pad
+  // Keep finger inside the pad
 
   x =
     Math.max(
@@ -733,7 +744,6 @@ function updateTrace(event) {
         x
       )
     );
-
 
   y =
     Math.max(
@@ -745,29 +755,30 @@ function updateTrace(event) {
     );
 
 
-  // ------------------------------
-  // MOVE DOT
-  // ------------------------------
+  // Convert position to percentage
 
   const percentX =
     (x / rect.width) * 100;
-
 
   const percentY =
     (y / rect.height) * 100;
 
 
+  // Move visual dot
+
   traceIndicator.style.left =
     `${percentX}%`;
-
 
   traceIndicator.style.top =
     `${percentY}%`;
 
 
-  // ------------------------------
+  // --------------------------------
   // INTENSITY
-  // ------------------------------
+  // --------------------------------
+
+  // Top = maximum
+  // Bottom = minimum
 
   targetIntensity =
     (
@@ -779,7 +790,7 @@ function updateTrace(event) {
 
 
 // --------------------------------
-// POINTER DOWN
+// FINGER DOWN
 // --------------------------------
 
 tracePad.addEventListener(
@@ -789,11 +800,9 @@ tracePad.addEventListener(
     isTouching =
       true;
 
-
     tracePad.setPointerCapture(
       event.pointerId
     );
-
 
     updateTrace(event);
 
@@ -802,7 +811,7 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// POINTER MOVE
+// FINGER / MOUSE MOVEMENT
 // --------------------------------
 
 tracePad.addEventListener(
@@ -816,7 +825,7 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// POINTER UP
+// FINGER RELEASE
 // --------------------------------
 
 tracePad.addEventListener(
@@ -826,33 +835,19 @@ tracePad.addEventListener(
     isTouching =
       false;
 
-
-    try {
-
-      tracePad.releasePointerCapture(
-        event.pointerId
-      );
-
-    } catch (error) {
-
-      console.log(
-        "Pointer already released"
-      );
-
-    }
-
-
-    // Smoothly return to zero
-
     targetIntensity =
       0;
+
+    tracePad.releasePointerCapture(
+      event.pointerId
+    );
 
   }
 );
 
 
 // --------------------------------
-// POINTER CANCEL
+// CANCEL / LEAVE
 // --------------------------------
 
 tracePad.addEventListener(
@@ -862,7 +857,6 @@ tracePad.addEventListener(
     isTouching =
       false;
 
-
     targetIntensity =
       0;
 
@@ -871,40 +865,24 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// SMOOTH LOVENSE LOOP
+// ULTRA SMOOTH INTENSITY ENGINE
 // --------------------------------
 
 function smoothTrace() {
 
-  // --------------------------------
-  // SMOOTH INTENSITY
-  // --------------------------------
+  // Smoothly approach target intensity
 
   const difference =
     targetIntensity -
     currentIntensity;
 
 
-  // Smooth movement.
-  // The smaller this number,
-  // the slower the intensity changes.
-
   currentIntensity +=
-    difference * 0.08;
+    difference *
+    0.08;
 
 
-  // Prevent tiny floating-point
-  // movements from causing jitter
-
-  if (
-    Math.abs(difference) < 0.05
-  ) {
-
-    currentIntensity =
-      targetIntensity;
-
-  }
-
+  // Round only when sending
 
   const intensity =
     Math.round(
@@ -912,45 +890,24 @@ function smoothTrace() {
     );
 
 
-  // Update number on screen
-
-  if (
-    currentIntensityElement
-  ) {
-
-    currentIntensityElement.textContent =
-      intensity;
-
-  }
-
-
-  // --------------------------------
-  // SEND TO LOVENSE
-  // --------------------------------
-
   const now =
-    Date.now();
+    performance.now();
 
 
-  const intensityDifference =
-    Math.abs(
-      intensity -
-      lastSentIntensity
-    );
-
+  // Send updates every 100ms
 
   if (
     socket &&
+    connectedToyId &&
     now -
     lastCommandTime >=
-    COMMAND_INTERVAL &&
-    intensityDifference >=
-    INTENSITY_DEADZONE
+    100 &&
+    intensity !==
+    lastSentIntensity
   ) {
 
     lastCommandTime =
       now;
-
 
     lastSentIntensity =
       intensity;
@@ -963,9 +920,7 @@ function smoothTrace() {
   }
 
 
-  // --------------------------------
-  // KEEP LOOP RUNNING
-  // --------------------------------
+  // Continue animation
 
   requestAnimationFrame(
     smoothTrace
@@ -974,7 +929,7 @@ function smoothTrace() {
 }
 
 
-// Start smooth loop
+// Start smooth engine
 
 smoothTrace();
 
