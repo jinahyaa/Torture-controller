@@ -662,9 +662,8 @@ async function connectLovense() {
 // START / STOP BUTTONS
 // -------------------------
 
-function sendCommand(
-  command
-) {
+window.sendCommand =
+function(command) {
 
   if (!socket) {
 
