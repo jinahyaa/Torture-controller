@@ -518,15 +518,34 @@
 
 
   function sendCommand(
-    command
-  ) {
+  command
+) {
 
-    console.log(
-      "Command:",
-      command
-    );
+  if (!socket) {
+
+    statusElement.textContent =
+      "Not connected ❌";
+
+    return;
 
   }
+
+
+  console.log(
+    "Sending command:",
+    command
+  );
+
+
+  socket.emit(
+    "basicapi_send_toy_command_ts",
+    {
+      command:
+        command
+    }
+  );
+
+}
 
 
 </script>
