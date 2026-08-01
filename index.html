@@ -825,7 +825,7 @@ function smoothTrace() {
     (
       targetIntensity -
       currentIntensity
-    ) * 0.25;
+    ) * 0.12;
 
 
   const intensity =
@@ -842,7 +842,7 @@ function smoothTrace() {
 
   if (
     socket &&
-    now - lastCommandTime >= 100 &&
+    now - lastCommandTime >= 150 &&
     intensity !== lastSentIntensity
   ) {
 
