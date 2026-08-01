@@ -31,13 +31,9 @@
     .controller {
       width: 100%;
       max-width: 500px;
-
       background: #1c1c1c;
-
       border-radius: 20px;
-
       padding: 25px;
-
       text-align: center;
     }
 
@@ -47,27 +43,18 @@
 
     .status {
       margin: 20px 0;
-
       padding: 12px;
-
       border-radius: 10px;
-
       background: #2a2a2a;
     }
 
     #connectButton {
       width: 100%;
-
       padding: 15px;
-
       margin-top: 10px;
-
       border: none;
-
       border-radius: 12px;
-
       font-size: 16px;
-
       cursor: pointer;
     }
 
@@ -77,19 +64,14 @@
 
     #qrContainer {
       display: none;
-
       margin: 20px 0;
     }
 
     #qrCode {
       width: 250px;
-
       max-width: 100%;
-
       background: white;
-
       padding: 10px;
-
       border-radius: 10px;
     }
 
@@ -99,69 +81,44 @@
 
     .trace-label {
       margin-bottom: 12px;
-
       color: #ccc;
     }
 
     .trace-pad {
       position: relative;
-
       width: 100%;
-
       height: 350px;
-
       background: #2a2a2a;
-
       border-radius: 20px;
-
       border: 2px solid #444;
-
       touch-action: none;
-
       overflow: hidden;
-
       cursor: crosshair;
-
       user-select: none;
-
       -webkit-user-select: none;
     }
 
     .trace-indicator {
       position: absolute;
-
       width: 34px;
-
       height: 34px;
-
       background: white;
-
       border-radius: 50%;
-
-      transform:
-        translate(-50%, -50%);
-
+      transform: translate(-50%, -50%);
       pointer-events: none;
-
       left: 50%;
-
       top: 100%;
-
-      box-shadow:
-        0 0 15px rgba(255,255,255,0.8);
+      box-shadow: 0 0 15px rgba(255,255,255,0.8);
     }
 
     .intensity-display {
       margin-top: 15px;
-
       font-size: 18px;
-
       color: #ccc;
     }
 
     #currentIntensity {
       color: white;
-
       font-weight: bold;
     }
   </style>
@@ -175,42 +132,22 @@
 ```
 <h1>Our Controller 💕</h1>
 
-<div
-  class="status"
-  id="status"
->
+<div class="status" id="status">
   Backend connecting...
 </div>
 
-
-<!-- QR CODE -->
-
-<div
-  id="qrContainer"
->
-
-  <p>
-    Scan this with Lovense Remote 📱
-  </p>
+<div id="qrContainer">
+  <p>Scan this with Lovense Remote 📱</p>
 
   <img
     id="qrCode"
     alt="Lovense QR Code"
   >
-
 </div>
 
-
-<!-- CONNECT BUTTON -->
-
-<button
-  id="connectButton"
->
+<button id="connectButton">
   Connect Lovense
 </button>
-
-
-<!-- FINGER TRACE -->
 
 <div class="trace-container">
 
@@ -230,14 +167,9 @@
 
   </div>
 
-
   <div class="intensity-display">
-
     Intensity:
-    <span id="currentIntensity">
-      0
-    </span>
-
+    <span id="currentIntensity">0</span>
   </div>
 
 </div>
@@ -303,16 +235,14 @@ let lastSentIntensity = -1;
 let lastCommandTime = 0;
 
 
-// How often we send commands
-// to Lovense
+// --------------------------------
+// COMMAND SETTINGS
+// --------------------------------
 
-const COMMAND_INTERVAL = 120;
+// Send commands frequently enough
+// to make the change feel continuous.
 
-
-// How much intensity must change
-// before sending another command
-
-const INTENSITY_DEADZONE = 1;
+const COMMAND_INTERVAL = 80;
 
 
 // --------------------------------
@@ -325,7 +255,6 @@ function sendToyCommand(intensity) {
     return;
   }
 
-
   const toyCommand = {
 
     command:
@@ -334,19 +263,16 @@ function sendToyCommand(intensity) {
     action:
       `Vibrate:${intensity}`,
 
+    // Keep the vibration active
+    // between updates.
+
     timeSec:
-      0,
+      20,
 
     apiVer:
       1
 
   };
-
-
-  console.log(
-    "Lovense command:",
-    intensity
-  );
 
 
   socket.emit(
@@ -376,9 +302,9 @@ async function connectLovense() {
 
   try {
 
-    // ------------------------------
+    // --------------------------------
     // AUTH TOKEN
-    // ------------------------------
+    // --------------------------------
 
     const authResponse =
       await fetch(
@@ -395,10 +321,8 @@ async function connectLovense() {
 
           body:
             JSON.stringify({
-
               uid:
                 uid
-
             })
 
         }
@@ -432,9 +356,9 @@ async function connectLovense() {
       authData.data.authToken;
 
 
-    // ------------------------------
+    // --------------------------------
     // GET SOCKET INFORMATION
-    // ------------------------------
+    // --------------------------------
 
     statusElement.textContent =
       "Getting Lovense connection...";
@@ -490,9 +414,9 @@ async function connectLovense() {
     }
 
 
-    // ------------------------------
+    // --------------------------------
     // CONNECT SOCKET
-    // ------------------------------
+    // --------------------------------
 
     statusElement.textContent =
       "Opening Lovense connection...";
@@ -517,9 +441,9 @@ async function connectLovense() {
       );
 
 
-    // ------------------------------
+    // --------------------------------
     // SOCKET CONNECTED
-    // ------------------------------
+    // --------------------------------
 
     socket.on(
       "connect",
@@ -534,8 +458,6 @@ async function connectLovense() {
           "Lovense connected ✅";
 
 
-        // Request QR code
-
         ackId =
           Math.random()
             .toString(36)
@@ -545,10 +467,8 @@ async function connectLovense() {
         socket.emit(
           "basicapi_get_qrcode_ts",
           {
-
             ackId:
               ackId
-
           }
         );
 
@@ -556,9 +476,9 @@ async function connectLovense() {
     );
 
 
-    // ------------------------------
+    // --------------------------------
     // QR CODE
-    // ------------------------------
+    // --------------------------------
 
     socket.on(
       "basicapi_get_qrcode_tc",
@@ -598,9 +518,9 @@ async function connectLovense() {
     );
 
 
-    // ------------------------------
+    // --------------------------------
     // DEVICE CONNECTED
-    // ------------------------------
+    // --------------------------------
 
     socket.on(
       "basicapi_update_device_info_tc",
@@ -642,9 +562,9 @@ async function connectLovense() {
     );
 
 
-    // ------------------------------
+    // --------------------------------
     // DISCONNECTED
-    // ------------------------------
+    // --------------------------------
 
     socket.on(
       "disconnect",
@@ -661,9 +581,9 @@ async function connectLovense() {
     );
 
 
-    // ------------------------------
+    // --------------------------------
     // SOCKET ERROR
-    // ------------------------------
+    // --------------------------------
 
     socket.on(
       "connect_error",
@@ -699,20 +619,7 @@ async function connectLovense() {
 
 
 // --------------------------------
-// SMOOTH FINGER TRACE
-// --------------------------------
-
-let isTouching = false;
-
-let targetIntensity = 0;
-let currentIntensity = 0;
-
-let lastSentIntensity = -1;
-let lastCommandTime = 0;
-
-
-// --------------------------------
-// UPDATE FINGER POSITION
+// TRACE POSITION
 // --------------------------------
 
 function updateTrace(event) {
@@ -720,6 +627,7 @@ function updateTrace(event) {
   if (!isTouching) {
     return;
   }
+
 
   const rect =
     tracePad.getBoundingClientRect();
@@ -729,12 +637,11 @@ function updateTrace(event) {
     event.clientX -
     rect.left;
 
+
   let y =
     event.clientY -
     rect.top;
 
-
-  // Keep finger inside the pad
 
   x =
     Math.max(
@@ -744,6 +651,7 @@ function updateTrace(event) {
         x
       )
     );
+
 
   y =
     Math.max(
@@ -755,30 +663,32 @@ function updateTrace(event) {
     );
 
 
-  // Convert position to percentage
+  // --------------------------------
+  // MOVE DOT
+  // --------------------------------
 
   const percentX =
     (x / rect.width) * 100;
+
 
   const percentY =
     (y / rect.height) * 100;
 
 
-  // Move visual dot
-
   traceIndicator.style.left =
     `${percentX}%`;
+
 
   traceIndicator.style.top =
     `${percentY}%`;
 
 
   // --------------------------------
-  // INTENSITY
+  // TARGET INTENSITY
   // --------------------------------
 
-  // Top = maximum
-  // Bottom = minimum
+  // Bottom = 0
+  // Top = 20
 
   targetIntensity =
     (
@@ -790,7 +700,7 @@ function updateTrace(event) {
 
 
 // --------------------------------
-// FINGER DOWN
+// POINTER DOWN
 // --------------------------------
 
 tracePad.addEventListener(
@@ -800,9 +710,11 @@ tracePad.addEventListener(
     isTouching =
       true;
 
+
     tracePad.setPointerCapture(
       event.pointerId
     );
+
 
     updateTrace(event);
 
@@ -811,7 +723,7 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// FINGER / MOUSE MOVEMENT
+// POINTER MOVE
 // --------------------------------
 
 tracePad.addEventListener(
@@ -825,7 +737,7 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// FINGER RELEASE
+// POINTER UP
 // --------------------------------
 
 tracePad.addEventListener(
@@ -835,19 +747,29 @@ tracePad.addEventListener(
     isTouching =
       false;
 
+
     targetIntensity =
       0;
 
-    tracePad.releasePointerCapture(
-      event.pointerId
-    );
+
+    if (
+      tracePad.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+
+      tracePad.releasePointerCapture(
+        event.pointerId
+      );
+
+    }
 
   }
 );
 
 
 // --------------------------------
-// CANCEL / LEAVE
+// POINTER CANCEL
 // --------------------------------
 
 tracePad.addEventListener(
@@ -857,6 +779,7 @@ tracePad.addEventListener(
     isTouching =
       false;
 
+
     targetIntensity =
       0;
 
@@ -865,24 +788,25 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// ULTRA SMOOTH INTENSITY ENGINE
+// SMOOTH INTENSITY ENGINE
 // --------------------------------
 
 function smoothTrace() {
 
-  // Smoothly approach target intensity
+  // This controls how quickly
+  // the intensity follows your finger.
 
-  const difference =
-    targetIntensity -
-    currentIntensity;
+  const smoothing =
+    0.12;
 
 
   currentIntensity +=
-    difference *
-    0.08;
+    (
+      targetIntensity -
+      currentIntensity
+    ) *
+    smoothing;
 
-
-  // Round only when sending
 
   const intensity =
     Math.round(
@@ -890,37 +814,51 @@ function smoothTrace() {
     );
 
 
+  // Update number on screen
+
+  currentIntensityElement.textContent =
+    intensity;
+
+
+  // --------------------------------
+  // SEND COMMAND
+  // --------------------------------
+
   const now =
     performance.now();
 
-
-  // Send updates every 100ms
 
   if (
     socket &&
     connectedToyId &&
     now -
     lastCommandTime >=
-    100 &&
-    intensity !==
-    lastSentIntensity
+    COMMAND_INTERVAL
   ) {
 
     lastCommandTime =
       now;
 
-    lastSentIntensity =
-      intensity;
+
+    // Only send if the value changed
+
+    if (
+      intensity !==
+      lastSentIntensity
+    ) {
+
+      lastSentIntensity =
+        intensity;
 
 
-    sendToyCommand(
-      intensity
-    );
+      sendToyCommand(
+        intensity
+      );
+
+    }
 
   }
 
-
-  // Continue animation
 
   requestAnimationFrame(
     smoothTrace
