@@ -253,7 +253,6 @@ const BACKEND_URL =
 const PLATFORM =
   "LiasLittleTorture";
 
-
 const statusElement =
   document.getElementById("status");
 
@@ -269,58 +268,34 @@ const tracePad =
 const traceIndicator =
   document.getElementById("traceIndicator");
 
-const currentIntensityElement =
-  document.getElementById("currentIntensity");
-
-const connectButton =
-  document.getElementById("connectButton");
-
-
 let socket = null;
-
 let ackId = null;
-
 let connectedToyId = null;
 
+let isTouching = false;
+let targetIntensity = 0;
+let currentIntensity = 0;
+let lastSentIntensity = -1;
+let lastCommandTime = 0;
 
-// ======================================
-// SEND TOY COMMAND
-// ======================================
 
-function sendToyCommand(
-  intensity
-) {
+// --------------------------------
+// SEND COMMAND TO LOVENSE
+// --------------------------------
 
-  if (
-    !socket ||
-    !connectedToyId
-  ) {
+function sendToyCommand(intensity) {
 
+  if (!socket) {
     return;
-
   }
 
-
-  const safeIntensity =
-    Math.max(
-      0,
-      Math.min(
-        20,
-        Math.round(intensity)
-      )
-    );
-
-
   const toyCommand = {
-
-    toy:
-      connectedToyId,
 
     command:
       "Function",
 
     action:
-      `Vibrate:${safeIntensity}`,
+      `Vibrate:${intensity}`,
 
     timeSec:
       20,
@@ -330,12 +305,10 @@ function sendToyCommand(
 
   };
 
-
   console.log(
-    "Sending toy command:",
+    "Sending:",
     toyCommand
   );
-
 
   socket.emit(
     "basicapi_send_toy_command_ts",
@@ -345,15 +318,14 @@ function sendToyCommand(
 }
 
 
-// ======================================
+// --------------------------------
 // CONNECT LOVENSE
-// ======================================
+// --------------------------------
 
 async function connectLovense() {
 
   statusElement.textContent =
     "Getting Lovense authentication...";
-
 
   const uid =
     "user-" +
@@ -361,10 +333,8 @@ async function connectLovense() {
       .toString(36)
       .substring(2, 12);
 
-
   try {
 
-    // STEP 1
     // Get authentication token
 
     const authResponse =
@@ -382,25 +352,20 @@ async function connectLovense() {
 
           body:
             JSON.stringify({
-
               uid:
                 uid
-
             })
 
         }
       );
 
-
     const authData =
       await authResponse.json();
-
 
     console.log(
       "Auth response:",
       authData
     );
-
 
     if (
       authData.code !== 0 ||
@@ -414,17 +379,14 @@ async function connectLovense() {
 
     }
 
-
     const authToken =
       authData.data.authToken;
 
 
-    // STEP 2
     // Get Socket information
 
     statusElement.textContent =
       "Getting Lovense connection...";
-
 
     const socketResponse =
       await fetch(
@@ -453,16 +415,13 @@ async function connectLovense() {
         }
       );
 
-
     const socketData =
       await socketResponse.json();
-
 
     console.log(
       "Socket response:",
       socketData
     );
-
 
     if (
       socketData.code !== 0
@@ -476,16 +435,13 @@ async function connectLovense() {
     }
 
 
-    // STEP 3
     // Connect Socket
 
     statusElement.textContent =
       "Opening Lovense connection...";
 
-
     const socketInfo =
       socketData.data;
-
 
     socket =
       io(
@@ -512,19 +468,16 @@ async function connectLovense() {
           "Lovense Socket connected!"
         );
 
-
         statusElement.textContent =
           "Lovense connected ✅";
 
 
-        // STEP 4
         // Request QR code
 
         ackId =
           Math.random()
             .toString(36)
             .substring(2, 20);
-
 
         socket.emit(
           "basicapi_get_qrcode_ts",
@@ -551,12 +504,10 @@ async function connectLovense() {
             ? JSON.parse(res)
             : {};
 
-
         console.log(
           "QR response:",
           resData
         );
-
 
         if (
           resData.data &&
@@ -566,13 +517,11 @@ async function connectLovense() {
           qrCode.src =
             resData.data.qrcodeUrl;
 
-
           qrContainer.style.display =
             "block";
 
-
           statusElement.textContent =
-            "QR code ready — scan with Lovense Remote 📱";
+            "QR ready — scan with Lovense Remote 📱";
 
         }
 
@@ -580,7 +529,6 @@ async function connectLovense() {
     );
 
 
-    // STEP 5
     // Detect connected toy
 
     socket.on(
@@ -592,12 +540,10 @@ async function connectLovense() {
             ? JSON.parse(res)
             : {};
 
-
         console.log(
           "Device information:",
           deviceInfo
         );
-
 
         if (
           deviceInfo.toyList &&
@@ -607,10 +553,8 @@ async function connectLovense() {
           connectedToyId =
             deviceInfo.toyList[0].id;
 
-
           statusElement.textContent =
             "Toy connected ✅";
-
 
           console.log(
             "Connected toy:",
@@ -623,7 +567,7 @@ async function connectLovense() {
     );
 
 
-    // Socket disconnected
+    // Disconnected
 
     socket.on(
       "disconnect",
@@ -631,7 +575,6 @@ async function connectLovense() {
 
         connectedToyId =
           null;
-
 
         statusElement.textContent =
           "Lovense disconnected ❌";
@@ -651,7 +594,6 @@ async function connectLovense() {
           error
         );
 
-
         statusElement.textContent =
           "Lovense Socket error ❌";
 
@@ -666,7 +608,6 @@ async function connectLovense() {
       error
     );
 
-
     statusElement.textContent =
       "Connection error ❌";
 
@@ -675,65 +616,122 @@ async function connectLovense() {
 }
 
 
-// ======================================
-// FINGER TRACE CONTROLLER
-// ======================================
+// --------------------------------
+// START / STOP BUTTONS
+// --------------------------------
 
-let isTouching =
-  false;
+window.sendCommand =
+function(command) {
 
-let targetIntensity =
-  0;
+  if (!socket) {
 
-let currentIntensity =
-  0;
+    statusElement.textContent =
+      "Not connected ❌";
 
-let lastCommandTime =
-  0;
+    return;
+
+  }
+
+  let action =
+    "";
+
+  if (
+    command === "start"
+  ) {
+
+    action =
+      "Vibrate:5";
+
+  }
+
+  if (
+    command === "stop"
+  ) {
+
+    action =
+      "Vibrate:0";
+
+  }
+
+  const toyCommand = {
+
+    command:
+      "Function",
+
+    action:
+      action,
+
+    timeSec:
+      20,
+
+    apiVer:
+      1
+
+  };
+
+  console.log(
+    "Sending button command:",
+    toyCommand
+  );
+
+  socket.emit(
+    "basicapi_send_toy_command_ts",
+    toyCommand
+  );
+
+};
 
 
-// ======================================
-// UPDATE FINGER POSITION
-// ======================================
+// --------------------------------
+// FINGER / MOUSE TRACE
+// --------------------------------
 
-function updateFingerPosition(
-  event
-) {
+function updateTrace(event) {
+
+  if (!isTouching) {
+    return;
+  }
 
   const rect =
     tracePad.getBoundingClientRect();
 
-
-  const x =
+  let x =
     event.clientX -
     rect.left;
 
-  const y =
+  let y =
     event.clientY -
     rect.top;
 
 
-  const percentX =
+  // Keep inside pad
+
+  x =
     Math.max(
       0,
       Math.min(
-        100,
-        (x / rect.width) * 100
+        rect.width,
+        x
       )
     );
 
+  y =
+    Math.max(
+      0,
+      Math.min(
+        rect.height,
+        y
+      )
+    );
+
+
+  // Move indicator
+
+  const percentX =
+    (x / rect.width) * 100;
 
   const percentY =
-    Math.max(
-      0,
-      Math.min(
-        100,
-        (y / rect.height) * 100
-      )
-    );
-
-
-  // Move visual indicator
+    (y / rect.height) * 100;
 
   traceIndicator.style.left =
     `${percentX}%`;
@@ -742,207 +740,121 @@ function updateFingerPosition(
     `${percentY}%`;
 
 
-  // Convert vertical position
-  // into intensity
+  // Vertical position controls intensity
 
   targetIntensity =
-    20 -
-    (
-      percentY /
-      100
-    ) *
-    20;
+    Math.round(
+      (1 - percentY / 100) * 20
+    );
 
 }
 
 
-// ======================================
-// FINGER DOWN
-// ======================================
+// Start touching / clicking
 
 tracePad.addEventListener(
   "pointerdown",
   (event) => {
 
-    event.preventDefault();
-
-
     isTouching =
       true;
-
 
     tracePad.setPointerCapture(
       event.pointerId
     );
 
-
-    updateFingerPosition(
-      event
-    );
+    updateTrace(event);
 
   }
 );
 
 
-// ======================================
-// FINGER MOVE
-// ======================================
+// Move finger / mouse
 
 tracePad.addEventListener(
   "pointermove",
   (event) => {
 
-    if (
-      !isTouching
-    ) {
-
-      return;
-
-    }
-
-
-    event.preventDefault();
-
-
-    updateFingerPosition(
-      event
-    );
+    updateTrace(event);
 
   }
 );
 
 
-// ======================================
-// FINGER UP
-// ======================================
-
-function stopFingerTrace() {
-
-  isTouching =
-    false;
-
-
-  targetIntensity =
-    0;
-
-
-  sendToyCommand(
-    0
-  );
-
-
-  currentIntensity =
-    0;
-
-
-  currentIntensityElement.textContent =
-    "0";
-
-
-  traceIndicator.style.left =
-    "50%";
-
-  traceIndicator.style.top =
-    "100%";
-
-}
-
-
-// Pointer released
+// Release finger / mouse
 
 tracePad.addEventListener(
   "pointerup",
-  (event) => {
+  () => {
 
-    event.preventDefault();
+    isTouching =
+      false;
 
-    stopFingerTrace();
+    targetIntensity =
+      0;
 
   }
 );
 
 
-// Pointer cancelled
+// If pointer leaves / gets cancelled
 
 tracePad.addEventListener(
   "pointercancel",
   () => {
 
-    stopFingerTrace();
+    isTouching =
+      false;
+
+    targetIntensity =
+      0;
 
   }
 );
 
 
-// Pointer leaves while captured
-
-tracePad.addEventListener(
-  "lostpointercapture",
-  () => {
-
-    if (
-      isTouching
-    ) {
-
-      stopFingerTrace();
-
-    }
-
-  }
-);
-
-
-// ======================================
-// SMOOTH INTENSITY LOOP
-// ======================================
+// --------------------------------
+// SMOOTH TRACE LOOP
+// --------------------------------
 
 function smoothTrace() {
 
+  // Smoothly approach target
+
+  currentIntensity +=
+    (
+      targetIntensity -
+      currentIntensity
+    ) * 0.25;
+
+
+  const intensity =
+    Math.round(
+      currentIntensity
+    );
+
+
+  const now =
+    Date.now();
+
+
+  // Update only when needed
+
   if (
-    isTouching
+    socket &&
+    now - lastCommandTime >= 100 &&
+    intensity !== lastSentIntensity
   ) {
 
-    currentIntensity +=
-      (
-        targetIntensity -
-        currentIntensity
-      ) *
-      0.25;
+    lastCommandTime =
+      now;
 
+    lastSentIntensity =
+      intensity;
 
-    const roundedIntensity =
-      Math.round(
-        currentIntensity
-      );
-
-
-    currentIntensityElement.textContent =
-      roundedIntensity;
-
-
-    const now =
-      Date.now();
-
-
-    // Send command every 100ms
-
-    if (
-      socket &&
-      connectedToyId &&
-      now -
-      lastCommandTime >=
-      100
-    ) {
-
-      lastCommandTime =
-        now;
-
-
-      sendToyCommand(
-        roundedIntensity
-      );
-
-    }
+    sendToyCommand(
+      intensity
+    );
 
   }
 
@@ -954,17 +866,21 @@ function smoothTrace() {
 }
 
 
+// Start animation
+
 smoothTrace();
 
 
-// ======================================
+// --------------------------------
 // CONNECT BUTTON
-// ======================================
+// --------------------------------
 
-connectButton.addEventListener(
-  "click",
-  connectLovense
-);
+document
+  .getElementById("connectButton")
+  .addEventListener(
+    "click",
+    connectLovense
+  );
 
 </script>
 
