@@ -708,6 +708,13 @@ const traceIndicator =
   document.getElementById("traceIndicator");
 
 
+let targetIntensity = 0;
+
+let currentIntensity = 0;
+
+let lastCommandTime = 0;
+
+
 tracePad.addEventListener(
   "pointermove",
   (event) => {
@@ -716,33 +723,28 @@ tracePad.addEventListener(
       tracePad.getBoundingClientRect();
 
 
-    const x =
-      event.clientX -
-      rect.left;
-
     const y =
       event.clientY -
       rect.top;
 
 
-    const percentX =
-      (x / rect.width) * 100;
-
     const percentY =
-      (y / rect.height) * 100;
+      Math.max(
+        0,
+        Math.min(
+          100,
+          (y / rect.height) * 100
+        )
+      );
 
 
-    // Move the visual indicator
-
-    traceIndicator.style.left =
-      `${percentX}%`;
+    // Move the dot immediately
 
     traceIndicator.style.top =
       `${percentY}%`;
 
 
-    // Convert vertical position
-    // into intensity
+    // Calculate target intensity
 
     const maxIntensity =
       Number(
@@ -750,56 +752,91 @@ tracePad.addEventListener(
       );
 
 
-    const intensity =
+    targetIntensity =
       Math.round(
         (percentY / 100) *
         maxIntensity
       );
 
-
-    intensityValue.textContent =
-      intensity;
-
-
-    // Send intensity to Lovense
-
-    if (
-      socket &&
-      connectedToyId
-    ) {
-
-      const toyCommand = {
-
-        command:
-          "Function",
-
-        action:
-          `Vibrate:${intensity}`,
-
-        timeSec:
-          20,
-
-        apiVer:
-          1
-
-      };
-
-
-      socket.emit(
-        "basicapi_send_toy_command_ts",
-        toyCommand
-      );
-
-
-      console.log(
-        "Trace intensity:",
-        intensity
-      );
-
-    }
-
   }
 );
+
+
+// Smooth intensity loop
+
+function smoothTrace() {
+
+  // Gradually move current intensity
+  // toward the target intensity
+
+  currentIntensity +=
+    (
+      targetIntensity -
+      currentIntensity
+    ) * 0.15;
+
+
+  const roundedIntensity =
+    Math.round(
+      currentIntensity
+    );
+
+
+  intensityValue.textContent =
+    roundedIntensity;
+
+
+  // Send commands at most every 50ms
+
+  const now =
+    Date.now();
+
+
+  if (
+    socket &&
+    connectedToyId &&
+    now - lastCommandTime >= 50
+  ) {
+
+    lastCommandTime =
+      now;
+
+
+    const toyCommand = {
+
+      command:
+        "Function",
+
+      action:
+        `Vibrate:${roundedIntensity}`,
+
+      timeSec:
+        20,
+
+      apiVer:
+        1
+
+    };
+
+
+    socket.emit(
+      "basicapi_send_toy_command_ts",
+      toyCommand
+    );
+
+  }
+
+
+  requestAnimationFrame(
+    smoothTrace
+  );
+
+}
+
+
+// Start smooth trace loop
+
+smoothTrace();
 
 
    document
