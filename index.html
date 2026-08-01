@@ -149,6 +149,10 @@
 
       box-shadow:
         0 0 15px rgba(255,255,255,0.8);
+
+      will-change:
+        left,
+        top;
     }
 
     .intensity-display {
@@ -295,49 +299,68 @@ let connectedToyId = null;
 let isTouching = false;
 
 
-// The intensity the finger is asking for
+// Raw position from finger
+
+let targetX = 0.5;
+
+let targetY = 1;
+
+
+// Smoothed visual position
+
+let smoothX = 0.5;
+
+let smoothY = 1;
+
+
+// Raw intensity target
 
 let targetIntensity = 0;
 
 
-// The intensity currently being sent
+// Smoothed intensity
 
 let currentIntensity = 0;
 
 
-// Last intensity actually sent
+// Last command sent
 
 let lastSentIntensity = -1;
 
 
-// Time of last command
+// Last command time
 
 let lastCommandTime = 0;
 
 
 // --------------------------------
-// SMOOTHING SETTINGS
+// SETTINGS
 // --------------------------------
 
-// How often we send commands
-// Lower = more responsive
-// Higher = fewer commands
 
-const COMMAND_INTERVAL = 80;
-
-
-// How quickly the toy follows
-// the finger.
-//
-// Higher = faster response
-// Lower = smoother but slower
-
-const SMOOTHING = 0.18;
-
-
-// Maximum Ambi intensity
+// Maximum intensity
 
 const MAX_INTENSITY = 20;
+
+
+// Send commands every 60ms
+
+const COMMAND_INTERVAL = 60;
+
+
+// Visual dot smoothing
+
+const POSITION_SMOOTHING = 0.28;
+
+
+// Toy intensity smoothing
+
+const INTENSITY_SMOOTHING = 0.16;
+
+
+// Don't send tiny meaningless changes
+
+const INTENSITY_DEADZONE = 0;
 
 
 // --------------------------------
@@ -562,8 +585,6 @@ async function connectLovense() {
           "Lovense connected ✅";
 
 
-        // Request QR code
-
         ackId =
           Math.random()
             .toString(36)
@@ -727,7 +748,7 @@ async function connectLovense() {
 
 
 // --------------------------------
-// UPDATE FINGER POSITION
+// UPDATE FINGER TARGET
 // --------------------------------
 
 function updateTrace(event) {
@@ -773,41 +794,30 @@ function updateTrace(event) {
     );
 
 
-  // Convert to percentage
+  // Convert to normalized coordinates
 
-  const percentX =
-    (x / rect.width) * 100;
-
-
-  const percentY =
-    (y / rect.height) * 100;
+  targetX =
+    x /
+    rect.width;
 
 
-  // --------------------------------
-  // MOVE VISUAL DOT
-  // --------------------------------
-
-  // The dot follows the finger
-  // immediately with no smoothing.
-
-  traceIndicator.style.left =
-    `${percentX}%`;
-
-  traceIndicator.style.top =
-    `${percentY}%`;
+  targetY =
+    y /
+    rect.height;
 
 
   // --------------------------------
-  // CALCULATE TARGET INTENSITY
+  // INTENSITY
   // --------------------------------
 
-  // Top = maximum
-  // Bottom = minimum
+  // Top = 20
+
+  // Bottom = 0
 
   targetIntensity =
     (
       1 -
-      percentY / 100
+      targetY
     ) *
     MAX_INTENSITY;
 
@@ -863,7 +873,7 @@ tracePad.addEventListener(
       false;
 
 
-    // Smoothly fade toward zero
+    // Fade smoothly toward zero
 
     targetIntensity =
       0;
@@ -905,31 +915,60 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// SMOOTH TOY ENGINE
+// ULTRA SMOOTH TRACE ENGINE
 // --------------------------------
 
 function smoothTrace() {
 
-  // Calculate difference
+  // --------------------------------
+  // SMOOTH VISUAL POSITION
+  // --------------------------------
 
-  const difference =
+  smoothX +=
+    (
+      targetX -
+      smoothX
+    ) *
+    POSITION_SMOOTHING;
+
+
+  smoothY +=
+    (
+      targetY -
+      smoothY
+    ) *
+    POSITION_SMOOTHING;
+
+
+  // Update dot
+
+  traceIndicator.style.left =
+    `${smoothX * 100}%`;
+
+
+  traceIndicator.style.top =
+    `${smoothY * 100}%`;
+
+
+  // --------------------------------
+  // SMOOTH INTENSITY
+  // --------------------------------
+
+  const intensityDifference =
     targetIntensity -
     currentIntensity;
 
 
-  // Smoothly move toward target
-
   currentIntensity +=
-    difference *
-    SMOOTHING;
+    intensityDifference *
+    INTENSITY_SMOOTHING;
 
 
-  // Stop tiny floating point
-  // movements from continuing forever
+  // Snap tiny differences
 
   if (
     Math.abs(
-      difference
+      intensityDifference
     ) < 0.01
   ) {
 
@@ -939,56 +978,70 @@ function smoothTrace() {
   }
 
 
-  // Convert to whole intensity
+  // --------------------------------
+  // DISPLAY
+  // --------------------------------
 
-  const intensity =
+  const displayIntensity =
     Math.round(
       currentIntensity
     );
 
 
-  // Update display
-
   currentIntensityElement.textContent =
-    intensity;
+    displayIntensity;
 
 
-  // Current time
+  // --------------------------------
+  // SEND TOY UPDATE
+  // --------------------------------
 
   const now =
     performance.now();
 
-
-  // --------------------------------
-  // SEND COMMAND
-  // --------------------------------
 
   if (
     socket &&
     connectedToyId &&
     now -
     lastCommandTime >=
-    COMMAND_INTERVAL &&
-    intensity !==
-    lastSentIntensity
+    COMMAND_INTERVAL
   ) {
 
-    lastCommandTime =
-      now;
+    const intensity =
+      Math.round(
+        currentIntensity
+      );
 
 
-    lastSentIntensity =
-      intensity;
+    // Only send if intensity changed
+
+    if (
+      Math.abs(
+        intensity -
+        lastSentIntensity
+      ) >
+      INTENSITY_DEADZONE
+    ) {
+
+      lastCommandTime =
+        now;
 
 
-    sendToyCommand(
-      intensity
-    );
+      lastSentIntensity =
+        intensity;
+
+
+      sendToyCommand(
+        intensity
+      );
+
+    }
 
   }
 
 
-  // Run again
+  // Continue loop
 
   requestAnimationFrame(
     smoothTrace
@@ -998,7 +1051,7 @@ function smoothTrace() {
 
 
 // --------------------------------
-// START SMOOTH ENGINE
+// START TRACE ENGINE
 // --------------------------------
 
 smoothTrace();
