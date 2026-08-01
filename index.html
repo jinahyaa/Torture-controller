@@ -31,6 +31,7 @@
     .controller {
       width: 100%;
       max-width: 500px;
+
       background: #1c1c1c;
       border-radius: 20px;
       padding: 25px;
@@ -86,40 +87,85 @@
 
     .trace-pad {
       position: relative;
+
       width: 100%;
       height: 350px;
+
       background: #2a2a2a;
+
       border-radius: 20px;
+
       border: 2px solid #444;
+
       touch-action: none;
+
       overflow: hidden;
+
       cursor: crosshair;
+
       user-select: none;
       -webkit-user-select: none;
     }
 
     .trace-indicator {
       position: absolute;
+
       width: 34px;
       height: 34px;
+
       background: white;
+
       border-radius: 50%;
-      transform: translate(-50%, -50%);
+
+      transform:
+        translate(-50%, -50%);
+
       pointer-events: none;
+
       left: 50%;
       top: 100%;
-      box-shadow: 0 0 15px rgba(255,255,255,0.8);
+
+      box-shadow:
+        0 0 15px rgba(255,255,255,0.8);
     }
 
     .intensity-display {
       margin-top: 15px;
+
       font-size: 18px;
+
       color: #ccc;
     }
 
     #currentIntensity {
       color: white;
       font-weight: bold;
+    }
+
+    .test-container {
+      margin-top: 25px;
+    }
+
+    .test-container p {
+      color: #ccc;
+    }
+
+    .test-button {
+      padding: 12px 15px;
+
+      margin: 5px;
+
+      border: none;
+
+      border-radius: 10px;
+
+      font-size: 14px;
+
+      cursor: pointer;
+    }
+
+    .test-button:active {
+      transform: scale(0.96);
     }
   </style>
 
@@ -132,22 +178,42 @@
 ```
 <h1>Our Controller 💕</h1>
 
-<div class="status" id="status">
+<div
+  class="status"
+  id="status"
+>
   Backend connecting...
 </div>
 
-<div id="qrContainer">
-  <p>Scan this with Lovense Remote 📱</p>
+
+<!-- QR CODE -->
+
+<div
+  id="qrContainer"
+>
+
+  <p>
+    Scan this with Lovense Remote 📱
+  </p>
 
   <img
     id="qrCode"
     alt="Lovense QR Code"
   >
+
 </div>
 
-<button id="connectButton">
+
+<!-- CONNECT BUTTON -->
+
+<button
+  id="connectButton"
+>
   Connect Lovense
 </button>
+
+
+<!-- FINGER TRACE -->
 
 <div class="trace-container">
 
@@ -167,10 +233,47 @@
 
   </div>
 
+
   <div class="intensity-display">
+
     Intensity:
-    <span id="currentIntensity">0</span>
+    <span id="currentIntensity">
+      0
+    </span>
+
   </div>
+
+</div>
+
+
+<!-- AMBI TEST BUTTONS -->
+
+<div class="test-container">
+
+  <p>
+    Ambi Motor Tests 🧪
+  </p>
+
+  <button
+    class="test-button"
+    onclick="testAmbi('normal')"
+  >
+    Test Normal
+  </button>
+
+  <button
+    class="test-button"
+    onclick="testAmbi('motor1')"
+  >
+    Test Motor 1
+  </button>
+
+  <button
+    class="test-button"
+    onclick="testAmbi('motor2')"
+  >
+    Test Motor 2
+  </button>
 
 </div>
 ```
@@ -236,16 +339,6 @@ let lastCommandTime = 0;
 
 
 // --------------------------------
-// COMMAND SETTINGS
-// --------------------------------
-
-// Send commands frequently enough
-// to make the change feel continuous.
-
-const COMMAND_INTERVAL = 80;
-
-
-// --------------------------------
 // SEND TOY COMMAND
 // --------------------------------
 
@@ -257,14 +350,14 @@ function sendToyCommand(intensity) {
 
   const toyCommand = {
 
+    toy:
+      connectedToyId,
+
     command:
       "Function",
 
     action:
       `Vibrate:${intensity}`,
-
-    // Keep the vibration active
-    // between updates.
 
     timeSec:
       20,
@@ -273,6 +366,95 @@ function sendToyCommand(intensity) {
       1
 
   };
+
+  console.log(
+    "Lovense command:",
+    toyCommand
+  );
+
+  socket.emit(
+    "basicapi_send_toy_command_ts",
+    toyCommand
+  );
+
+}
+
+
+// --------------------------------
+// AMBI TEST COMMAND
+// --------------------------------
+
+function testAmbi(type) {
+
+  if (!socket) {
+
+    alert(
+      "Lovense is not connected!"
+    );
+
+    return;
+
+  }
+
+
+  let action =
+    "";
+
+
+  if (
+    type === "normal"
+  ) {
+
+    action =
+      "Vibrate:5";
+
+  }
+
+
+  if (
+    type === "motor1"
+  ) {
+
+    action =
+      "Vibrate1:5";
+
+  }
+
+
+  if (
+    type === "motor2"
+  ) {
+
+    action =
+      "Vibrate2:5";
+
+  }
+
+
+  const toyCommand = {
+
+    toy:
+      connectedToyId,
+
+    command:
+      "Function",
+
+    action:
+      action,
+
+    timeSec:
+      5,
+
+    apiVer:
+      1
+
+  };
+
+
+  console.log(
+    "Testing Ambi:",
+    toyCommand
+  );
 
 
   socket.emit(
@@ -302,9 +484,9 @@ async function connectLovense() {
 
   try {
 
-    // --------------------------------
+    // ------------------------------
     // AUTH TOKEN
-    // --------------------------------
+    // ------------------------------
 
     const authResponse =
       await fetch(
@@ -321,8 +503,10 @@ async function connectLovense() {
 
           body:
             JSON.stringify({
+
               uid:
                 uid
+
             })
 
         }
@@ -356,9 +540,9 @@ async function connectLovense() {
       authData.data.authToken;
 
 
-    // --------------------------------
+    // ------------------------------
     // GET SOCKET INFORMATION
-    // --------------------------------
+    // ------------------------------
 
     statusElement.textContent =
       "Getting Lovense connection...";
@@ -414,9 +598,9 @@ async function connectLovense() {
     }
 
 
-    // --------------------------------
+    // ------------------------------
     // CONNECT SOCKET
-    // --------------------------------
+    // ------------------------------
 
     statusElement.textContent =
       "Opening Lovense connection...";
@@ -441,9 +625,9 @@ async function connectLovense() {
       );
 
 
-    // --------------------------------
+    // ------------------------------
     // SOCKET CONNECTED
-    // --------------------------------
+    // ------------------------------
 
     socket.on(
       "connect",
@@ -458,6 +642,8 @@ async function connectLovense() {
           "Lovense connected ✅";
 
 
+        // Request QR code
+
         ackId =
           Math.random()
             .toString(36)
@@ -467,8 +653,10 @@ async function connectLovense() {
         socket.emit(
           "basicapi_get_qrcode_ts",
           {
+
             ackId:
               ackId
+
           }
         );
 
@@ -476,9 +664,9 @@ async function connectLovense() {
     );
 
 
-    // --------------------------------
+    // ------------------------------
     // QR CODE
-    // --------------------------------
+    // ------------------------------
 
     socket.on(
       "basicapi_get_qrcode_tc",
@@ -518,9 +706,9 @@ async function connectLovense() {
     );
 
 
-    // --------------------------------
+    // ------------------------------
     // DEVICE CONNECTED
-    // --------------------------------
+    // ------------------------------
 
     socket.on(
       "basicapi_update_device_info_tc",
@@ -562,9 +750,9 @@ async function connectLovense() {
     );
 
 
-    // --------------------------------
+    // ------------------------------
     // DISCONNECTED
-    // --------------------------------
+    // ------------------------------
 
     socket.on(
       "disconnect",
@@ -581,9 +769,9 @@ async function connectLovense() {
     );
 
 
-    // --------------------------------
+    // ------------------------------
     // SOCKET ERROR
-    // --------------------------------
+    // ------------------------------
 
     socket.on(
       "connect_error",
@@ -619,7 +807,7 @@ async function connectLovense() {
 
 
 // --------------------------------
-// TRACE POSITION
+// FINGER TRACE
 // --------------------------------
 
 function updateTrace(event) {
@@ -643,6 +831,8 @@ function updateTrace(event) {
     rect.top;
 
 
+  // Keep inside pad
+
   x =
     Math.max(
       0,
@@ -663,9 +853,7 @@ function updateTrace(event) {
     );
 
 
-  // --------------------------------
-  // MOVE DOT
-  // --------------------------------
+  // Convert to percentage
 
   const percentX =
     (x / rect.width) * 100;
@@ -675,6 +863,8 @@ function updateTrace(event) {
     (y / rect.height) * 100;
 
 
+  // Move dot
+
   traceIndicator.style.left =
     `${percentX}%`;
 
@@ -683,12 +873,8 @@ function updateTrace(event) {
     `${percentY}%`;
 
 
-  // --------------------------------
-  // TARGET INTENSITY
-  // --------------------------------
-
-  // Bottom = 0
-  // Top = 20
+  // Vertical position
+  // controls intensity
 
   targetIntensity =
     (
@@ -752,17 +938,9 @@ tracePad.addEventListener(
       0;
 
 
-    if (
-      tracePad.hasPointerCapture(
-        event.pointerId
-      )
-    ) {
-
-      tracePad.releasePointerCapture(
-        event.pointerId
-      );
-
-    }
+    tracePad.releasePointerCapture(
+      event.pointerId
+    );
 
   }
 );
@@ -788,24 +966,19 @@ tracePad.addEventListener(
 
 
 // --------------------------------
-// SMOOTH INTENSITY ENGINE
+// SMOOTH TRACE ENGINE
 // --------------------------------
 
 function smoothTrace() {
 
-  // This controls how quickly
-  // the intensity follows your finger.
-
-  const smoothing =
-    0.12;
+  const difference =
+    targetIntensity -
+    currentIntensity;
 
 
   currentIntensity +=
-    (
-      targetIntensity -
-      currentIntensity
-    ) *
-    smoothing;
+    difference *
+    0.08;
 
 
   const intensity =
@@ -814,15 +987,9 @@ function smoothTrace() {
     );
 
 
-  // Update number on screen
-
   currentIntensityElement.textContent =
     intensity;
 
-
-  // --------------------------------
-  // SEND COMMAND
-  // --------------------------------
 
   const now =
     performance.now();
@@ -833,29 +1000,22 @@ function smoothTrace() {
     connectedToyId &&
     now -
     lastCommandTime >=
-    COMMAND_INTERVAL
+    100 &&
+    intensity !==
+    lastSentIntensity
   ) {
 
     lastCommandTime =
       now;
 
 
-    // Only send if the value changed
-
-    if (
-      intensity !==
-      lastSentIntensity
-    ) {
-
-      lastSentIntensity =
-        intensity;
+    lastSentIntensity =
+      intensity;
 
 
-      sendToyCommand(
-        intensity
-      );
-
-    }
+    sendToyCommand(
+      intensity
+    );
 
   }
 
@@ -870,6 +1030,8 @@ function smoothTrace() {
 // Start smooth engine
 
 smoothTrace();
+
+
 // --------------------------------
 // CONNECT BUTTON
 // --------------------------------
