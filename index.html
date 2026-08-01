@@ -175,74 +175,119 @@
     );
 
 
+  
     async function connectLovense() {
 
+  statusElement.textContent =
+    "Getting Lovense authentication...";
+
+  const uid =
+    "user-" +
+    Math.random()
+      .toString(36)
+      .substring(2, 12);
+
+  try {
+
+    // Step 1: Get authToken from our backend
+    const authResponse =
+      await fetch(
+        `${BACKEND_URL}/auth-token`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            uid: uid
+          })
+        }
+      );
+
+    const authData =
+      await authResponse.json();
+
+    if (
+      authData.code !== 0 ||
+      !authData.data?.authToken
+    ) {
+
       statusElement.textContent =
-        "Connecting to Lovense...";
+        "Authentication failed ❌";
+
+      return;
+    }
+
+    const authToken =
+      authData.data.authToken;
 
 
-      const uid =
-        "user-" +
-        Math.random()
-          .toString(36)
-          .substring(2, 12);
+    // Step 2: Ask Lovense for Socket connection info
+    statusElement.textContent =
+      "Connecting to Lovense Socket...";
+
+    const socketResponse =
+      await fetch(
+        "https://api.lovense-api.com/api/basicApi/getSocketUrl",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            platform: PLATFORM,
+            authToken: authToken
+          })
+        }
+      );
 
 
-      try {
-
-        const response =
-          await fetch(
-            `${BACKEND_URL}/auth-token`,
-            {
-
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                uid: uid
-              })
-
-            }
-          );
+    const socketData =
+      await socketResponse.json();
 
 
-        const data =
-          await response.json();
+    console.log(
+      "Socket response:",
+      socketData
+    );
 
 
-        console.log(
-          "Lovense response:",
-          data
-        );
+    if (
+      socketData.code === 0
+    ) {
 
+      statusElement.textContent =
+        "Socket information received ✅";
 
-        if (data.code === 0 && data.data?.authToken) {
+      console.log(
+        "Socket URL:",
+        socketData.data
+      );
 
-  statusElement.textContent =
-    "Lovense authentication successful ✅";
+    } else {
 
-} else {
-
-  statusElement.textContent =
-    "Lovense authentication failed ❌";
-
-}
-
-
-      } catch (error) {
-
-        console.error(error);
-
-        statusElement.textContent =
-          "Connection error ❌";
-
-      }
+      statusElement.textContent =
+        "Socket connection setup failed ❌";
 
     }
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    statusElement.textContent =
+      "Connection error ❌";
+
+  }
+
+}
 
 
     async function sendCommand(
