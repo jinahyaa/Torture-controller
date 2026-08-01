@@ -289,18 +289,60 @@ async function connectLovense() {
     );
 
   socket.on(
-    "connect",
-    () => {
+  "connect",
+  () => {
 
-      console.log(
-        "Lovense Socket connected!"
-      );
+    console.log(
+      "Lovense Socket connected!"
+    );
 
-      statusElement.textContent =
-        "Lovense connected ✅";
+    statusElement.textContent =
+      "Lovense connected ✅";
 
-    }
-  );
+    const ackId =
+      Math.random()
+        .toString(36)
+        .substring(2, 20);
+
+    socket.emit(
+      "basicapi_get_qrcode_ts",
+      {
+        ackId: ackId
+      }
+    );
+
+    socket.on(
+      "basicapi_get_qrcode_tc",
+      (res) => {
+
+        const resData =
+          res ? JSON.parse(res) : {};
+
+        console.log(
+          "QR response:",
+          resData
+        );
+
+        if (
+          resData.data &&
+          resData.data.ackId === ackId
+        ) {
+
+          console.log(
+            "QR Code URL:",
+            resData.data.qrcodeUrl
+          );
+
+          statusElement.textContent =
+            "QR code received ✅";
+
+        }
+
+      }
+    );
+
+  }
+);
 
   socket.on(
     "disconnect",
