@@ -178,7 +178,7 @@
 
 
   
-  async function connectLovense() {
+async function connectLovense() {
 
   statusElement.textContent =
     "Getting Lovense authentication...";
@@ -191,6 +191,7 @@
 
   try {
 
+    // Step 1: Get authToken
     const authResponse =
       await fetch(
         `${BACKEND_URL}/auth-token`,
@@ -211,11 +212,6 @@
     const authData =
       await authResponse.json();
 
-    console.log(
-      "Auth response:",
-      authData
-    );
-
     if (
       authData.code !== 0 ||
       !authData.data?.authToken
@@ -228,13 +224,68 @@
 
     }
 
+    const authToken =
+      authData.data.authToken;
+
+
+    // Step 2: Get Socket information
     statusElement.textContent =
-      "Authentication successful ✅";
+      "Getting Lovense connection...";
+
+    const socketResponse =
+      await fetch(
+        "https://api.lovense-api.com/api/basicApi/getSocketUrl",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            platform:
+              PLATFORM,
+
+            authToken:
+              authToken
+          })
+        }
+      );
+
+
+    const socketData =
+      await socketResponse.json();
+
+
+    console.log(
+      "Socket response:",
+      socketData
+    );
+
+
+    if (
+      socketData.code === 0
+    ) {
+
+      statusElement.textContent =
+        "Socket information received ✅";
+
+      console.log(
+        "Socket URL:",
+        socketData.data
+      );
+
+    } else {
+
+      statusElement.textContent =
+        "Socket setup failed ❌";
+
+    }
 
   } catch (error) {
 
     console.error(
-      "Authentication error:",
       error
     );
 
