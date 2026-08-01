@@ -264,24 +264,79 @@ async function connectLovense() {
     );
 
 
-    if (
-      socketData.code === 0
-    ) {
+  if (socketData.code === 0) {
 
-      statusElement.textContent =
-        "Socket information received ✅";
+  statusElement.textContent =
+    "Opening Lovense connection...";
+
+  const socketInfo =
+    socketData.data;
+
+  console.log(
+    "Socket info received:",
+    socketInfo
+  );
+
+  const socket =
+    io(
+      socketInfo.socketIoUrl,
+      {
+        path:
+          socketInfo.socketIoPath,
+        transports:
+          ["websocket"]
+      }
+    );
+
+  socket.on(
+    "connect",
+    () => {
 
       console.log(
-        "Socket URL:",
-        socketData.data
+        "Lovense Socket connected!"
       );
 
-    } else {
-
       statusElement.textContent =
-        "Socket setup failed ❌";
+        "Lovense connected ✅";
 
     }
+  );
+
+  socket.on(
+    "disconnect",
+    () => {
+
+      console.log(
+        "Lovense Socket disconnected"
+      );
+
+      statusElement.textContent =
+        "Lovense disconnected ❌";
+
+    }
+  );
+
+  socket.on(
+    "connect_error",
+    (error) => {
+
+      console.error(
+        "Lovense Socket error:",
+        error
+      );
+
+      statusElement.textContent =
+        "Lovense Socket error ❌";
+
+    }
+  );
+
+} else {
+
+  statusElement.textContent =
+    "Socket setup failed ❌";
+
+}
 
   } catch (error) {
 
