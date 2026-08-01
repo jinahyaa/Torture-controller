@@ -222,39 +222,91 @@
 
  <script>
 
-  const BACKEND_URL =
-    "https://torture-controller.onrender.com";
+const BACKEND_URL =
+  "https://torture-controller.onrender.com";
 
-  const PLATFORM =
-    "LiasLittleTorture";
-
-
-  const statusElement =
-    document.getElementById("status");
-
-  const qrContainer =
-    document.getElementById("qrContainer");
-
-  const qrCode =
-    document.getElementById("qrCode");
-
-  const intensitySlider =
-    document.getElementById("intensity");
-
-  const intensityValue =
-    document.getElementById("intensityValue");
+const PLATFORM =
+  "LiasLittleTorture";
 
 
-  let socket = null;
+const statusElement =
+  document.getElementById("status");
 
-  let ackId = null;
+const qrContainer =
+  document.getElementById("qrContainer");
 
-  let connectedToyId = null;
+const qrCode =
+  document.getElementById("qrCode");
+
+const intensitySlider =
+  document.getElementById("intensity");
+
+const intensityValue =
+  document.getElementById("intensityValue");
+
+const tracePad =
+  document.getElementById("tracePad");
+
+const traceIndicator =
+  document.getElementById("traceIndicator");
 
 
-  // Intensity slider display
+let socket = null;
 
-  intensitySlider.addEventListener(
+let ackId = null;
+
+let connectedToyId = null;
+
+
+// -------------------------
+// SEND TOY COMMAND
+// -------------------------
+
+function sendToyCommand(
+  intensity
+) {
+
+  if (!socket) {
+    return;
+  }
+
+
+  const toyCommand = {
+
+    command:
+      "Function",
+
+    action:
+      `Vibrate:${intensity}`,
+
+    timeSec:
+      20,
+
+    apiVer:
+      1
+
+  };
+
+
+  console.log(
+    "Sending toy command:",
+    toyCommand
+  );
+
+
+  socket.emit(
+    "basicapi_send_toy_command_ts",
+    toyCommand
+  );
+
+}
+
+
+// -------------------------
+// INTENSITY SLIDER
+// -------------------------
+
+intensitySlider.addEventListener(
   "input",
   () => {
 
@@ -268,451 +320,429 @@
       intensity;
 
 
-    if (!socket) {
-      return;
-    }
-
-
-    const toyCommand = {
-
-      command:
-        "Function",
-
-      action:
-        `Vibrate:${intensity}`,
-
-      timeSec:
-        20,
-
-      apiVer:
-        1
-
-    };
-
-
-    console.log(
-      "Sending intensity:",
+    sendToyCommand(
       intensity
-    );
-
-
-    socket.emit(
-      "basicapi_send_toy_command_ts",
-      toyCommand
     );
 
   }
 );
 
 
-  // Connect to Lovense
+// -------------------------
+// CONNECT LOVENSE
+// -------------------------
 
-  window.connectLovense =
-    async function() {
+async function connectLovense() {
 
-      statusElement.textContent =
-        "Getting Lovense authentication...";
-
-
-      const uid =
-        "user-" +
-        Math.random()
-          .toString(36)
-          .substring(2, 12);
+  statusElement.textContent =
+    "Getting Lovense authentication...";
 
 
-      try {
-
-        // STEP 1: Get authentication token
-
-        const authResponse =
-          await fetch(
-            `${BACKEND_URL}/auth-token`,
-            {
-
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify({
-                  uid:
-                    uid
-                })
-
-            }
-          );
+  const uid =
+    "user-" +
+    Math.random()
+      .toString(36)
+      .substring(2, 12);
 
 
-        const authData =
-          await authResponse.json();
+  try {
 
+    // STEP 1
+    // Get authentication token
 
-        console.log(
-          "Auth response:",
-          authData
-        );
+    const authResponse =
+      await fetch(
+        `${BACKEND_URL}/auth-token`,
+        {
 
+          method:
+            "POST",
 
-        if (
-          authData.code !== 0 ||
-          !authData.data?.authToken
-        ) {
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-          statusElement.textContent =
-            "Authentication failed ❌";
+          body:
+            JSON.stringify({
 
-          return;
+              uid:
+                uid
+
+            })
 
         }
+      );
 
 
-        const authToken =
-          authData.data.authToken;
+    const authData =
+      await authResponse.json();
 
 
-        // STEP 2: Get Socket information
+    console.log(
+      "Auth response:",
+      authData
+    );
 
-        statusElement.textContent =
-          "Getting Lovense connection...";
 
-
-        const socketResponse =
-          await fetch(
-            "https://api.lovense-api.com/api/basicApi/getSocketUrl",
-            {
-
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify({
-
-                  platform:
-                    PLATFORM,
-
-                  authToken:
-                    authToken
-
-                })
-
-            }
-          );
-
-
-        const socketData =
-          await socketResponse.json();
-
-
-        console.log(
-          "Socket response:",
-          socketData
-        );
-
-
-        if (
-          socketData.code !== 0
-        ) {
-
-          statusElement.textContent =
-            "Socket setup failed ❌";
-
-          return;
-
-        }
-
-
-        // STEP 3: Connect Socket
-
-        statusElement.textContent =
-          "Opening Lovense connection...";
-
-
-        const socketInfo =
-          socketData.data;
-
-
-        socket =
-          io(
-            socketInfo.socketIoUrl,
-            {
-
-              path:
-                socketInfo.socketIoPath,
-
-              transports:
-                ["websocket"]
-
-            }
-          );
-
-
-        // Socket connected
-
-        socket.on(
-          "connect",
-          () => {
-
-            console.log(
-              "Lovense Socket connected!"
-            );
-
-
-            statusElement.textContent =
-              "Lovense connected ✅";
-
-
-            // STEP 4: Request QR code
-
-            ackId =
-              Math.random()
-                .toString(36)
-                .substring(2, 20);
-
-
-            socket.emit(
-              "basicapi_get_qrcode_ts",
-              {
-
-                ackId:
-                  ackId
-
-              }
-            );
-
-          }
-        );
-
-
-        // Receive QR code
-
-        socket.on(
-          "basicapi_get_qrcode_tc",
-          (res) => {
-
-            const resData =
-              res
-                ? JSON.parse(res)
-                : {};
-
-
-            console.log(
-              "QR response:",
-              resData
-            );
-
-
-            if (
-              resData.data &&
-              resData.data.ackId === ackId
-            ) {
-
-              console.log(
-                "QR Code URL:",
-                resData.data.qrcodeUrl
-              );
-
-
-              qrCode.src =
-                resData.data.qrcodeUrl;
-
-
-              qrContainer.style.display =
-                "block";
-
-
-              statusElement.textContent =
-                "QR code ready — scan with Lovense Remote 📱";
-
-            }
-
-          }
-        );
-
-
-        // STEP 5: Detect connected toy
-
-        socket.on(
-          "basicapi_update_device_info_tc",
-          (res) => {
-
-            const deviceInfo =
-              res
-                ? JSON.parse(res)
-                : {};
-
-
-            console.log(
-              "Device information:",
-              deviceInfo
-            );
-
-
-            if (
-              deviceInfo.toyList &&
-              deviceInfo.toyList.length > 0
-            ) {
-
-              connectedToyId =
-                deviceInfo.toyList[0].id;
-
-
-              statusElement.textContent =
-                "Toy connected ✅";
-
-
-              console.log(
-                "Connected toy:",
-                deviceInfo.toyList[0]
-              );
-
-            }
-
-          }
-        );
-
-
-        // Socket disconnected
-
-        socket.on(
-          "disconnect",
-          () => {
-
-            connectedToyId =
-              null;
-
-
-            statusElement.textContent =
-              "Lovense disconnected ❌";
-
-          }
-        );
-
-
-        // Socket connection error
-
-        socket.on(
-          "connect_error",
-          (error) => {
-
-            console.error(
-              "Lovense Socket error:",
-              error
-            );
-
-
-            statusElement.textContent =
-              "Lovense Socket error ❌";
-
-          }
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "Connection error:",
-          error
-        );
-
-
-        statusElement.textContent =
-          "Connection error ❌";
-
-      }
-
-    };
-
-
-  // Send toy command
-
-  window.sendCommand =
-  function(command) {
-
-    if (!socket) {
+    if (
+      authData.code !== 0 ||
+      !authData.data?.authToken
+    ) {
 
       statusElement.textContent =
-        "Not connected ❌";
+        "Authentication failed ❌";
 
       return;
 
     }
 
 
-    let action =
-      "";
+    const authToken =
+      authData.data.authToken;
 
 
-    if (
-      command === "start"
-    ) {
+    // STEP 2
+    // Get Socket information
 
-      action =
-        "Vibrate:5";
-
-    }
+    statusElement.textContent =
+      "Getting Lovense connection...";
 
 
-    if (
-      command === "stop"
-    ) {
+    const socketResponse =
+      await fetch(
+        "https://api.lovense-api.com/api/basicApi/getSocketUrl",
+        {
 
-      action =
-        "Vibrate:0";
+          method:
+            "POST",
 
-    }
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify({
+
+              platform:
+                PLATFORM,
+
+              authToken:
+                authToken
+
+            })
+
+        }
+      );
 
 
-    const toyCommand = {
-
-      command:
-        "Function",
-
-      action:
-        action,
-
-      timeSec:
-        20,
-
-      apiVer:
-        1
-
-    };
+    const socketData =
+      await socketResponse.json();
 
 
     console.log(
-      "Sending toy command:",
-      toyCommand
+      "Socket response:",
+      socketData
     );
 
 
-    socket.emit(
-      "basicapi_send_toy_command_ts",
-      toyCommand
+    if (
+      socketData.code !== 0
+    ) {
+
+      statusElement.textContent =
+        "Socket setup failed ❌";
+
+      return;
+
+    }
+
+
+    // STEP 3
+    // Connect Socket
+
+    statusElement.textContent =
+      "Opening Lovense connection...";
+
+
+    const socketInfo =
+      socketData.data;
+
+
+    socket =
+      io(
+        socketInfo.socketIoUrl,
+        {
+
+          path:
+            socketInfo.socketIoPath,
+
+          transports:
+            ["websocket"]
+
+        }
+      );
+
+
+    // Socket connected
+
+    socket.on(
+      "connect",
+      () => {
+
+        console.log(
+          "Lovense Socket connected!"
+        );
+
+
+        statusElement.textContent =
+          "Lovense connected ✅";
+
+
+        // STEP 4
+        // Request QR code
+
+        ackId =
+          Math.random()
+            .toString(36)
+            .substring(2, 20);
+
+
+        socket.emit(
+          "basicapi_get_qrcode_ts",
+          {
+
+            ackId:
+              ackId
+
+          }
+        );
+
+      }
     );
+
+
+    // Receive QR code
+
+    socket.on(
+      "basicapi_get_qrcode_tc",
+      (res) => {
+
+        const resData =
+          res
+            ? JSON.parse(res)
+            : {};
+
+
+        console.log(
+          "QR response:",
+          resData
+        );
+
+
+        if (
+          resData.data &&
+          resData.data.ackId === ackId
+        ) {
+
+          qrCode.src =
+            resData.data.qrcodeUrl;
+
+
+          qrContainer.style.display =
+            "block";
+
+
+          statusElement.textContent =
+            "QR code ready — scan with Lovense Remote 📱";
+
+        }
+
+      }
+    );
+
+
+    // STEP 5
+    // Detect connected toy
+
+    socket.on(
+      "basicapi_update_device_info_tc",
+      (res) => {
+
+        const deviceInfo =
+          res
+            ? JSON.parse(res)
+            : {};
+
+
+        console.log(
+          "Device information:",
+          deviceInfo
+        );
+
+
+        if (
+          deviceInfo.toyList &&
+          deviceInfo.toyList.length > 0
+        ) {
+
+          connectedToyId =
+            deviceInfo.toyList[0].id;
+
+
+          statusElement.textContent =
+            "Toy connected ✅";
+
+
+          console.log(
+            "Connected toy:",
+            deviceInfo.toyList[0]
+          );
+
+        }
+
+      }
+    );
+
+
+    // Socket disconnected
+
+    socket.on(
+      "disconnect",
+      () => {
+
+        connectedToyId =
+          null;
+
+
+        statusElement.textContent =
+          "Lovense disconnected ❌";
+
+      }
+    );
+
+
+    // Socket error
+
+    socket.on(
+      "connect_error",
+      (error) => {
+
+        console.error(
+          "Lovense Socket error:",
+          error
+        );
+
+
+        statusElement.textContent =
+          "Lovense Socket error ❌";
+
+      }
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Connection error:",
+      error
+    );
+
+
+    statusElement.textContent =
+      "Connection error ❌";
+
+  }
+
+}
+
+
+// -------------------------
+// START / STOP BUTTONS
+// -------------------------
+
+function sendCommand(
+  command
+) {
+
+  if (!socket) {
+
+    statusElement.textContent =
+      "Not connected ❌";
+
+    return;
+
+  }
+
+
+  let action =
+    "";
+
+
+  if (
+    command === "start"
+  ) {
+
+    action =
+      "Vibrate:5";
+
+  }
+
+
+  if (
+    command === "stop"
+  ) {
+
+    action =
+      "Vibrate:0";
+
+  }
+
+
+  const toyCommand = {
+
+    command:
+      "Function",
+
+    action:
+      action,
+
+    timeSec:
+      20,
+
+    apiVer:
+      1
 
   };
-const tracePad =
-  document.getElementById("tracePad");
-
-const traceIndicator =
-  document.getElementById("traceIndicator");
 
 
-let targetIntensity = 0;
+  console.log(
+    "Sending toy command:",
+    toyCommand
+  );
 
-let currentIntensity = 0;
 
-let lastCommandTime = 0;
+  socket.emit(
+    "basicapi_send_toy_command_ts",
+    toyCommand
+  );
+
+}
+
+
+// -------------------------
+// FINGER TRACE
+// -------------------------
+
+let targetIntensity =
+  0;
+
+let currentIntensity =
+  0;
+
+let lastCommandTime =
+  0;
 
 
 tracePad.addEventListener(
@@ -738,13 +768,13 @@ tracePad.addEventListener(
       );
 
 
-    // Move the dot immediately
+    // Move dot
 
     traceIndicator.style.top =
       `${percentY}%`;
 
 
-    // Calculate target intensity
+    // Calculate target
 
     const maxIntensity =
       Number(
@@ -753,27 +783,24 @@ tracePad.addEventListener(
 
 
     targetIntensity =
-      Math.round(
-        (percentY / 100) *
-        maxIntensity
-      );
+      (
+        percentY / 100
+      ) *
+      maxIntensity;
 
   }
 );
 
 
-// Smooth intensity loop
+// Smooth trace animation
 
 function smoothTrace() {
-
-  // Gradually move current intensity
-  // toward the target intensity
 
   currentIntensity +=
     (
       targetIntensity -
       currentIntensity
-    ) * 0.15;
+    ) * 0.2;
 
 
   const roundedIntensity =
@@ -786,8 +813,6 @@ function smoothTrace() {
     roundedIntensity;
 
 
-  // Send commands at most every 50ms
-
   const now =
     Date.now();
 
@@ -795,33 +820,17 @@ function smoothTrace() {
   if (
     socket &&
     connectedToyId &&
-    now - lastCommandTime >= 50
+    now -
+    lastCommandTime >=
+    100
   ) {
 
     lastCommandTime =
       now;
 
 
-    const toyCommand = {
-
-      command:
-        "Function",
-
-      action:
-        `Vibrate:${roundedIntensity}`,
-
-      timeSec:
-        20,
-
-      apiVer:
-        1
-
-    };
-
-
-    socket.emit(
-      "basicapi_send_toy_command_ts",
-      toyCommand
+    sendToyCommand(
+      roundedIntensity
     );
 
   }
@@ -834,12 +843,14 @@ function smoothTrace() {
 }
 
 
-// Start smooth trace loop
-
 smoothTrace();
 
 
-   document
+// -------------------------
+// CONNECT BUTTON
+// -------------------------
+
+document
   .getElementById("connectButton")
   .addEventListener(
     "click",
