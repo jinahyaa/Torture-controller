@@ -191,7 +191,9 @@
 
   let socket = null;
 
-  let ackId = null;
+let ackId = null;
+
+let connectedToyId = null;
 
 
   intensitySlider.addEventListener(
@@ -408,31 +410,22 @@
 
 
           if (
-            resData.data &&
-            resData.data.ackId === ackId
-          ) {
+  deviceInfo.toyList &&
+  deviceInfo.toyList.length > 0
+) {
 
-            console.log(
-              "QR Code URL:",
-              resData.data.qrcodeUrl
-            );
+  connectedToyId =
+    deviceInfo.toyList[0].id;
 
+  statusElement.textContent =
+    "Toy connected ✅";
 
-            qrCode.src =
-              resData.data.qrcodeUrl;
+  console.log(
+    "Connected toy:",
+    deviceInfo.toyList[0]
+  );
 
-
-            qrContainer.style.display =
-              "block";
-
-
-            statusElement.textContent =
-              "QR code ready — scan with Lovense Remote 📱";
-
-          }
-
-        }
-      );
+}
 
 
       // STEP 5: Detect connected toy
@@ -517,7 +510,7 @@
   }
 
 
-  function sendCommand(
+function sendCommand(
   command
 ) {
 
@@ -531,18 +524,62 @@
   }
 
 
+  if (
+    !connectedToyId
+  ) {
+
+    statusElement.textContent =
+      "No toy detected ❌";
+
+    return;
+
+  }
+
+
+  let action =
+    "";
+
+
+  if (
+    command === "start"
+  ) {
+
+    action =
+      "Vibrate:5";
+
+  }
+
+
+  if (
+    command === "stop"
+  ) {
+
+    action =
+      "Vibrate:0";
+
+  }
+
+
+  const toyCommand = {
+
+    toy:
+      connectedToyId,
+
+    command:
+      action
+
+  };
+
+
   console.log(
-    "Sending command:",
-    command
+    "Sending toy command:",
+    toyCommand
   );
 
 
   socket.emit(
     "basicapi_send_toy_command_ts",
-    {
-      command:
-        command
-    }
+    toyCommand
   );
 
 }
