@@ -733,6 +733,95 @@ tracePad.addEventListener(
       (y / rect.height) * 100;
 
 
+    // Move the visual indicator
+
+    traceIndicator.style.left =
+      `${percentX}%`;
+
+    traceIndicator.style.top =
+      `${percentY}%`;
+
+
+    // Convert vertical position
+    // into intensity
+
+    const maxIntensity =
+      Number(
+        intensitySlider.value
+      );
+
+
+    const intensity =
+      Math.round(
+        (percentY / 100) *
+        maxIntensity
+      );
+
+
+    intensityValue.textContent =
+      intensity;
+
+
+    // Send intensity to Lovense
+
+    if (
+      socket &&
+      connectedToyId
+    ) {
+
+      const toyCommand = {
+
+        command:
+          "Function",
+
+        action:
+          `Vibrate:${intensity}`,
+
+        timeSec:
+          20,
+
+        apiVer:
+          1
+
+      };
+
+
+      socket.emit(
+        "basicapi_send_toy_command_ts",
+        toyCommand
+      );
+
+
+      console.log(
+        "Trace intensity:",
+        intensity
+      );
+
+    }
+
+  }
+);
+
+    const rect =
+      tracePad.getBoundingClientRect();
+
+
+    const x =
+      event.clientX -
+      rect.left;
+
+    const y =
+      event.clientY -
+      rect.top;
+
+
+    const percentX =
+      (x / rect.width) * 100;
+
+    const percentY =
+      (y / rect.height) * 100;
+
+
     traceIndicator.style.left =
       `${percentX}%`;
 
