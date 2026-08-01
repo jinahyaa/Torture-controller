@@ -271,21 +271,23 @@ function sendToyCommand(
   }
 
 
-  const toyCommand = {
+const toyCommand =
+{
+  toy:
+    connectedToyId,
 
-    command:
-      "Function",
+  command:
+    "Function",
 
-    action:
-      `Vibrate:${intensity}`,
+  action:
+    `Vibrate:${intensity}`,
 
-    timeSec:
-      20,
+  timeSec:
+    20,
 
-    apiVer:
-      1
-
-  };
+  apiVer:
+    1
+};
 
 
   console.log(
