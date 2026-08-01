@@ -1,10 +1,186 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Our Lovense Controller</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lovense Controller</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .controller {
+      width: 100%;
+      max-width: 500px;
+      background: #1c1c1c;
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    .status {
+      margin: 20px 0;
+      padding: 12px;
+      border-radius: 10px;
+      background: #2a2a2a;
+    }
+
+    .slider-container {
+      margin: 30px 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+  </style>
 </head>
+
 <body>
-    <h1>Our Lovense Controller</h1>
-    <p>Coming soon 👀</p>
+
+  <div class="controller">
+
+    <h1>Our Controller 💕</h1>
+
+    <div class="status" id="status">
+      Connecting...
+    </div>
+
+    <div class="slider-container">
+      <p>Intensity: <span id="intensityValue">0</span></p>
+
+      <input
+        type="range"
+        id="intensity"
+        min="0"
+        max="20"
+        value="0"
+      >
+    </div>
+
+    <div class="buttons">
+      <button onclick="sendCommand('start')">
+        Start
+      </button>
+
+      <button onclick="sendCommand('stop')">
+        Stop
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+
+    // Replace this with your Render backend URL
+    const BACKEND_URL = "https://your-service-name.onrender.com";
+
+    const statusElement = document.getElementById("status");
+    const intensitySlider = document.getElementById("intensity");
+    const intensityValue = document.getElementById("intensityValue");
+
+    intensitySlider.addEventListener("input", () => {
+      intensityValue.textContent = intensitySlider.value;
+    });
+
+    async function sendCommand(command) {
+
+      const intensity = intensitySlider.value;
+
+      try {
+
+        const response = await fetch(
+          `${BACKEND_URL}/command`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+              command: command,
+              intensity: Number(intensity)
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        console.log(data);
+
+      } catch (error) {
+
+        console.error(error);
+
+        statusElement.textContent =
+          "Connection error";
+
+      }
+
+    }
+
+    async function checkConnection() {
+
+      try {
+
+        const response =
+          await fetch(`${BACKEND_URL}/`);
+
+        if (response.ok) {
+
+          statusElement.textContent =
+            "Backend connected ✅";
+
+        }
+
+      } catch (error) {
+
+        statusElement.textContent =
+          "Backend unavailable ❌";
+
+      }
+
+    }
+
+    checkConnection();
+
+  </script>
+
 </body>
 </html>
