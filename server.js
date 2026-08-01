@@ -13,6 +13,47 @@ app.get("/", (req, res) => {
   });
 });
 
+app.post("/auth-token", async (req, res) => {
+  try {
+    const { uid } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({
+        error: "Missing uid"
+      });
+    }
+
+    const response = await fetch(
+      "https://api.lovense.com/api/lan/getToken",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+          uid: uid,
+          token: process.env.LOVENSE_KEY
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to get Lovense auth token"
+    });
+
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
