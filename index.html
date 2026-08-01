@@ -199,14 +199,54 @@
   // Intensity slider display
 
   intensitySlider.addEventListener(
-    "input",
-    () => {
+  "input",
+  () => {
 
-      intensityValue.textContent =
-        intensitySlider.value;
+    const intensity =
+      Number(
+        intensitySlider.value
+      );
 
+
+    intensityValue.textContent =
+      intensity;
+
+
+    if (!socket) {
+      return;
     }
-  );
+
+
+    const toyCommand = {
+
+      command:
+        "Function",
+
+      action:
+        `Vibrate:${intensity}`,
+
+      timeSec:
+        20,
+
+      apiVer:
+        1
+
+    };
+
+
+    console.log(
+      "Sending intensity:",
+      intensity
+    );
+
+
+    socket.emit(
+      "basicapi_send_toy_command_ts",
+      toyCommand
+    );
+
+  }
+);
 
 
   // Connect to Lovense
