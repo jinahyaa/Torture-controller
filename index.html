@@ -801,41 +801,7 @@ tracePad.addEventListener(
   }
 );
 
-    const rect =
-      tracePad.getBoundingClientRect();
 
-
-    const x =
-      event.clientX -
-      rect.left;
-
-    const y =
-      event.clientY -
-      rect.top;
-
-
-    const percentX =
-      (x / rect.width) * 100;
-
-    const percentY =
-      (y / rect.height) * 100;
-
-
-    traceIndicator.style.left =
-      `${percentX}%`;
-
-    traceIndicator.style.top =
-      `${percentY}%`;
-
-
-    console.log(
-      "Finger position:",
-      percentX,
-      percentY
-    );
-
-  }
-);
    document
   .getElementById("connectButton")
   .addEventListener(
