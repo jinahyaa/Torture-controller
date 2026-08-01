@@ -219,9 +219,17 @@
         );
 
 
-        statusElement.textContent =
-  "Lovense response: " +
-  JSON.stringify(data);
+        if (data.code === 0 && data.data?.authToken) {
+
+  statusElement.textContent =
+    "Lovense authentication successful ✅";
+
+} else {
+
+  statusElement.textContent =
+    "Lovense authentication failed ❌";
+
+}
 
 
       } catch (error) {
