@@ -219,17 +219,9 @@
         );
 
 
-        if (data.code === 200) {
-
-          statusElement.textContent =
-            "Lovense authentication successful ✅";
-
-        } else {
-
-          statusElement.textContent =
-            "Lovense authentication failed ❌";
-
-        }
+        statusElement.textContent =
+  "Lovense response: " +
+  JSON.stringify(data);
 
 
       } catch (error) {
