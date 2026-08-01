@@ -540,75 +540,71 @@
   // Send toy command
 
   window.sendCommand =
-    function(command) {
+  function(command) {
 
-      if (!socket) {
+    if (!socket) {
 
-        statusElement.textContent =
-          "Not connected ❌";
+      statusElement.textContent =
+        "Not connected ❌";
 
-        return;
+      return;
 
-      }
-
-
-      if (!connectedToyId) {
-
-        statusElement.textContent =
-          "No toy detected ❌";
-
-        return;
-
-      }
+    }
 
 
-      let action =
-        "";
+    let action =
+      "";
 
 
-      if (
-        command === "start"
-      ) {
+    if (
+      command === "start"
+    ) {
 
-        action =
-          "Vibrate:5";
+      action =
+        "Vibrate:5";
 
-      }
-
-
-      if (
-        command === "stop"
-      ) {
-
-        action =
-          "Vibrate:0";
-
-      }
+    }
 
 
-      const toyCommand = {
+    if (
+      command === "stop"
+    ) {
 
-        toy:
-          connectedToyId,
+      action =
+        "Vibrate:0";
 
-        command:
-          action
-
-      };
-
-
-      console.log(
-        "Sending toy command:",
-        toyCommand
-      );
+    }
 
 
-      socket.emit(
-        "basicapi_send_toy_command_ts",
-        toyCommand
-      );
+    const toyCommand = {
+
+      command:
+        "Function",
+
+      action:
+        action,
+
+      timeSec:
+        20,
+
+      apiVer:
+        1
 
     };
+
+
+    console.log(
+      "Sending toy command:",
+      toyCommand
+    );
+
+
+    socket.emit(
+      "basicapi_send_toy_command_ts",
+      toyCommand
+    );
+
+  };
 
 </script>
 
